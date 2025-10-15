@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Jogo de Botão LAN</title>
+<style>
+  body { background:#0c304f; color:white; font-family:sans-serif; text-align:center; }
+  canvas { background:#2ea34f; display:block; margin:20px auto; border:2px solid white; }
+</style>
+</head>
+<body>
+<h2>🏆 Jogo de Botão LAN</h2>
+<p id="status">Conectando ao servidor...</p>
+<canvas id="game" width="600" height="400"></canvas>
+
+<script>
+const ws = new WebSocket("ws://10.60.0.99:8080"); // IP do host
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const status = document.getElementById("status");
+
+let playerId = null;
+let players = {};
+let bola = {x:300,y:200,raio:8};
+
+function drawGoals(){
+    ctx.fillStyle="yellow";
+    ctx.fillRect(0,150,10,100);
+    ctx.fillRect(590,150,10,100);
+}
+
+function desenhar(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    drawGoals();
+
+    // Bola
+    ctx.fillStyle="white";
+    ctx.beginPath();
+    ctx.arc(bola.x, bola.y, bola.raio,0,Math.PI*2);
+    ctx.fill();
+
+    // Jogadores
+    for(let id in players){
+        const p = players[id];
+        ctx.fillStyle = (p.team===1)?"#00FF88":"#FF5555";
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 12,0,Math.PI*2);
+        ctx.fill();
+        ctx.fillStyle="white";
+        ctx.font="10px Arial";
+        ctx.fillText(p.name,p.x-20,p.y-15);
+    }
+}
+
+ws.onopen = ()=>{
+    console.log("✅ Conectado ao servidor");
+    status.textContent="Conectado!";
+};
+
+ws.onmessage = event=>{
+    const msg = JSON.parse(event.data);
+    switch(msg.type){
+        case 'welcome':
+            playerId = msg.playerId;
+            break;
+        case 'stateSync':
+            players = msg.players || {};
+            bola = msg.bola || bola;
+            break;
+        case 'newPlayer':
+            players[msg.player.id] = msg.player;
+            break;
+        case 'playerLeft':
+            delete players[msg.playerId];
+            break;
+        case 'playerUpdate':
+            players[msg.player.id] = msg.player;
+            break;
+        case 'update':
+            bola = msg.bola;
+            break;
+    }
+    desenhar();
+};
+
+ws.onclose = ()=>{ status.textContent="❌ Desconectado"; };
+
+// Inputs
+document.addEventListener("keydown",(e)=>{
+    if(!playerId) return;
+    let input=null;
+    if(e.key==="ArrowUp") input="up";
+    if(e.key==="ArrowDown") input="down";
+    if(e.key==="ArrowLeft") input="left";
+    if(e.key==="ArrowRight") input="right";
+    if(input) ws.send(JSON.stringify({type:"input",playerId,input}));
+});
+
+// Loop de desenho
+setInterval(desenhar,30);
+</script>
+</body>
+</html>

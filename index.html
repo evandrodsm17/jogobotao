@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Jogo de Botão LAN</title>
+    <style>
+      body {
+        background: #292a2a;
+        color: white;
+        font-family: sans-serif;
+        text-align: center;
+      }
+      canvas {
+        background: #0b572d;
+        display: block;
+        margin: 20px auto;
+        border: 2px solid white;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>🏆 Jogo de Botão LAN</h2>
+    <p id="status">Conectando ao servidor...</p>
+    <p id="score">0 x 0</p>
+    <p id="time">03:00</p>
+    <canvas id="game" width="600" height="400"></canvas>
+
+    <script>
+      const ws = new WebSocket("ws://10.60.0.99:8080"); // IP do host
+      const canvas = document.getElementById("game");
+      const ctx = canvas.getContext("2d");
+      const status = document.getElementById("status");
+      const scoreEl = document.getElementById("score");
+      const timeEl = document.getElementById("time");
+
+      let playerId = null;
+      let players = {};
+      let bola = { x: 300, y: 200, raio: 8 };
+      let score = { 1: 0, 2: 0 };
+      let gameTime = 180;
+      let teamCount = { 1: 0, 2: 0 };
+      const team1Positions = [
+        { x: 100, y: 100 },
+        { x: 100, y: 200 },
+        { x: 100, y: 300 },
+      ];
+      const team2Positions = [
+        { x: 500, y: 100 },
+        { x: 500, y: 200 },
+        { x: 500, y: 300 },
+      ];
+
+      function assignPosition(player) {
+        if (player.team === 1)
+          Object.assign(player, team1Positions[teamCount[1]++]);
+        else Object.assign(player, team2Positions[teamCount[2]++]);
+      }
+
+      function drawGoals() {
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, 150, 10, 100);
+        ctx.fillRect(590, 150, 10, 100);
+      }
+
+      function desenhar() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawGoals();
+
+        // Bola
+        ctx.fillStyle = "white";
+        ctx.beginPath();
+        ctx.arc(bola.x, bola.y, bola.raio, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Jogadores
+        for (let id in players) {
+          const p = players[id];
+          const playerRadius = 12; // Raio do jogador
+          const borderWidth = 2; // Largura da borda // Cor do time 1 (Vermelho) e time 2 (Azul)
+
+          const teamColor = p.team === 1 ? "#c11717" : "#2e30eb"; // Cor da borda e linha para o time 1 (Preto) e time 2 (Vermelho)
+          const borderColor = p.team === 1 ? "black" : "#c11717"; // Borda preta para time 1, vermelha para time 2
+          const lineColor = p.team === 1 ? "black" : "#c11717"; // Linha preta para time 1, vermelha para time 2 // 1. Desenha a borda (círculo maior)
+
+          ctx.fillStyle = borderColor;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, playerRadius + borderWidth, 0, Math.PI * 2);
+          ctx.fill(); // 2. Desenha o jogador (círculo principal)
+
+          ctx.fillStyle = teamColor;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, playerRadius, 0, Math.PI * 2);
+          ctx.fill(); // 3. Desenha a linha horizontal
+
+          ctx.fillStyle = lineColor;
+          ctx.fillRect(p.x - playerRadius, p.y - 1, playerRadius * 2, 2); // Ajuste o '1' e '2' para espessura da linha // 4. Desenha o número "10"
+
+          ctx.fillStyle = "white"; // Cor do número
+          ctx.font = "bold 14px Arial"; // Tamanho e estilo da fonte
+          ctx.textAlign = "center"; // Centraliza o texto horizontalmente
+          ctx.textBaseline = "middle"; // Centraliza o texto verticalmente
+          ctx.fillText("10", p.x, p.y); // Desenha o número na posição do jogador // 5. Desenha o nome do jogador (se ainda quiser)
+
+          ctx.fillStyle = "white";
+          ctx.font = "14px Arial";
+          ctx.textAlign = "center"; // Garante que o nome também seja centralizado
+          ctx.textBaseline = "alphabetic"; // Retorna ao default para o nome
+          ctx.fillText(p.name, p.x, p.y - playerRadius - 5); // Posição um pouco acima do jogador
+        }
+
+        // Atualiza placar e tempo
+        scoreEl.textContent = `${score[1]} x ${score[2]}`;
+        const min = Math.floor(gameTime / 60)
+          .toString()
+          .padStart(2, "0");
+        const sec = (gameTime % 60).toString().padStart(2, "0");
+        timeEl.textContent = `${min}:${sec}`;
+      }
+
+      ws.onopen = () => {
+        console.log("✅ Conectado ao servidor");
+        status.textContent = "Conectado!";
+      };
+
+      ws.onmessage = (event) => {
+        const msg = JSON.parse(event.data);
+        switch (msg.type) {
+          case "welcome":
+            playerId = msg.playerId;
+            const team = msg.team; // <-- PEGA O TIME ATRIBUÍDO PELO SERVIDOR
+
+            players[playerId] = {
+              id: playerId,
+              name: "Player_" + playerId.slice(0, 4),
+              team,
+            };
+            assignPosition(players[playerId]);
+            ws.send(
+              JSON.stringify({ type: "newPlayer", player: players[playerId] })
+            );
+            break;
+
+          case "stateSync":
+            players = msg.players || {};
+            bola = msg.bola || bola;
+            score = msg.score || score;
+            gameTime = msg.gameTime || gameTime;
+            break;
+
+          case "newPlayer":
+            players[msg.player.id] = msg.player;
+            break;
+
+          case "playerLeft":
+            delete players[msg.playerId];
+            break;
+
+          case "playerUpdate":
+            players[msg.player.id] = msg.player;
+            break;
+
+          case "update":
+            bola = msg.bola || bola;
+            if (msg.gameTime !== undefined) gameTime = msg.gameTime;
+            if (msg.score) score = msg.score;
+            break;
+
+          case "scoreUpdate":
+            score = msg.score;
+            break;
+
+          case "gameOver":
+            alert(
+              `Fim de jogo! Placar final ${msg.score[1]} x ${msg.score[2]}`
+            );
+            break;
+        }
+        desenhar();
+      };
+
+      ws.onclose = () => {
+        status.textContent = "❌ Desconectado";
+      };
+
+      // Captura inputs do jogador
+      document.addEventListener("keydown", (e) => {
+        if (!playerId) return;
+        let input = null;
+        if (e.key === "ArrowUp") input = "up";
+        if (e.key === "ArrowDown") input = "down";
+        if (e.key === "ArrowLeft") input = "left";
+        if (e.key === "ArrowRight") input = "right";
+        if (e.code === "Space") input = "kick"; // chute
+        if (input) ws.send(JSON.stringify({ type: "input", playerId, input }));
+      });
+
+      // Loop de desenho
+      setInterval(desenhar, 30);
+    </script>
+  </body>
+</html>
