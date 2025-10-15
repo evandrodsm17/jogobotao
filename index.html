@@ -23,7 +23,7 @@
     <p id="status">Conectando ao servidor...</p>
     <p id="score">0 x 0</p>
     <p id="time">03:00</p>
-    <canvas id="game" width="600" height="400"></canvas>
+    <canvas id="game" width="800" height="500"></canvas>
 
     <script>
       const ws = new WebSocket("ws://10.60.0.99:8080"); // IP do host
@@ -33,40 +33,124 @@
       const scoreEl = document.getElementById("score");
       const timeEl = document.getElementById("time");
 
+      const WIDTH = canvas.width; // 600
+      const HEIGHT = canvas.height; // 400
+
       let playerId = null;
       let players = {};
       let bola = { x: 300, y: 200, raio: 8 };
       let score = { 1: 0, 2: 0 };
       let gameTime = 180;
-      let teamCount = { 1: 0, 2: 0 };
-      const team1Positions = [
-        { x: 100, y: 100 },
-        { x: 100, y: 200 },
-        { x: 100, y: 300 },
-      ];
-      const team2Positions = [
-        { x: 500, y: 100 },
-        { x: 500, y: 200 },
-        { x: 500, y: 300 },
-      ];
 
-      function assignPosition(player) {
-        if (player.team === 1)
-          Object.assign(player, team1Positions[teamCount[1]++]);
-        else Object.assign(player, team2Positions[teamCount[2]++]);
+      // let teamCount = { 1: 0, 2: 0 };
+      // const team1Positions = [
+      //   { x: 100, y: 100 },
+      //   { x: 100, y: 200 },
+      //   { x: 100, y: 300 },
+      // ];
+      // const team2Positions = [
+      //   { x: 500, y: 100 },
+      //   { x: 500, y: 200 },
+      //   { x: 500, y: 300 },
+      // ];
+
+      function promptName() {
+        let playerName = null;
+        const maxLength = 10;
+
+        // Loop para forçar o usuário a digitar um nome válido
+        while (
+          !playerName ||
+          playerName.trim().length === 0 ||
+          playerName.length > maxLength
+        ) {
+          playerName = window.prompt(
+            `Escolha seu nome de jogador (máx. ${maxLength} caracteres):`
+          );
+
+          // Se o usuário clicar em Cancelar
+          if (playerName === null) {
+            playerName = "Player"; // Nome padrão para evitar loop infinito
+            break;
+          }
+
+          playerName = playerName.trim();
+
+          if (playerName.length > maxLength) {
+            alert(
+              `O nome deve ter no máximo ${maxLength} caracteres. Tente novamente.`
+            );
+          }
+        }
+        return playerName.substring(0, maxLength); // Garante que o nome não passe de 10
       }
 
-      function drawGoals() {
+      // function assignPosition(player) {
+      //   if (player.team === 1)
+      //     Object.assign(player, team1Positions[teamCount[1]++]);
+      //   else Object.assign(player, team2Positions[teamCount[2]++]);
+      // }
+
+      function drawField() {
+        // Constantes de dimensão (mantidas)
+        const playerGoalWidth = 15;
+        const goalAreaWidth = 70;
+        const goalAreaHeight = 150;
+        const goalY = (HEIGHT - goalAreaHeight) / 2; // 100
+
+        ctx.strokeStyle = "white";
+        ctx.lineWidth = 2;
         ctx.fillStyle = "white";
-        ctx.fillRect(0, 150, 10, 100);
-        ctx.fillRect(590, 150, 10, 100);
+
+        // Desenha as traves (Gols) - Retângulos preenchidos
+        ctx.fillRect(0, goalY, playerGoalWidth, goalAreaHeight);
+        ctx.fillRect(WIDTH - playerGoalWidth, goalY, playerGoalWidth, goalAreaHeight);
+
+        // --- GRUPO 1: LINHAS RETAS E ÁREAS (USAM UM ÚNICO STROKE) ---
+        ctx.beginPath();
+
+        // Linha externa do campo (opcional, mas boa prática)
+        ctx.rect(0, 0, WIDTH, HEIGHT);
+
+        // Linha do meio de campo
+        ctx.moveTo(WIDTH / 2, 0);
+        ctx.lineTo(WIDTH / 2, HEIGHT);
+
+        // Área de Gol Esquerda
+        ctx.rect(playerGoalWidth, goalY, goalAreaWidth, goalAreaHeight);
+
+        // Área de Gol Direita
+        ctx.rect(
+          WIDTH - playerGoalWidth - goalAreaWidth,
+          goalY,
+          goalAreaWidth,
+          goalAreaHeight
+        );
+
+        ctx.stroke();
+        // FIM DO GRUPO 1
+
+        // --- GRUPO 2: CÍRCULO CENTRAL (PRECISA DE UM NOVO BEGIN PATH) ---
+        // CORREÇÃO: Usamos um novo caminho para garantir que não haja conexão com a linha.
+        ctx.beginPath();
+        ctx.arc(WIDTH / 2, HEIGHT / 2, 50, 0, Math.PI * 2);
+        ctx.stroke();
+        // FIM DO GRUPO 2
       }
 
       function desenhar() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        drawGoals();
+        drawField();
 
         // Bola
+        // 1. Desenha a borda preta da bola
+        ctx.strokeStyle = "black"; // COR DA BORDA
+        ctx.lineWidth = 1; // ESPESSURA DA BORDA
+        ctx.beginPath();
+        ctx.arc(bola.x, bola.y, bola.raio, 0, Math.PI * 2);
+        ctx.stroke(); // Desenha a borda
+
+        // 2. Desenha o preenchimento da bola (branco)
         ctx.fillStyle = "white";
         ctx.beginPath();
         ctx.arc(bola.x, bola.y, bola.raio, 0, Math.PI * 2);
@@ -75,8 +159,8 @@
         // Jogadores
         for (let id in players) {
           const p = players[id];
-          const playerRadius = 12; // Raio do jogador
-          const borderWidth = 2; // Largura da borda // Cor do time 1 (Vermelho) e time 2 (Azul)
+          const playerRadius = 15; // Raio do jogador
+          const borderWidth = 3; // Largura da borda // Cor do time 1 (Vermelho) e time 2 (Azul)
 
           const teamColor = p.team === 1 ? "#c11717" : "#2e30eb"; // Cor da borda e linha para o time 1 (Preto) e time 2 (Vermelho)
           const borderColor = p.team === 1 ? "black" : "#c11717"; // Borda preta para time 1, vermelha para time 2
@@ -127,17 +211,15 @@
         switch (msg.type) {
           case "welcome":
             playerId = msg.playerId;
-            const team = msg.team; // <-- PEGA O TIME ATRIBUÍDO PELO SERVIDOR
+            const team = msg.team;
+            const playerName = promptName(); 
 
-            players[playerId] = {
-              id: playerId,
-              name: "Player_" + playerId.slice(0, 4),
-              team,
-            };
-            assignPosition(players[playerId]);
             ws.send(
-              JSON.stringify({ type: "newPlayer", player: players[playerId] })
-            );
+              JSON.stringify({ 
+                type: "newPlayer", 
+                player: { id: playerId, name: playerName, team }
+        })
+      );
             break;
 
           case "stateSync":
