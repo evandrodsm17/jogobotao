@@ -603,6 +603,8 @@
         // Separa os jogadores por time
         for (let id in players) {
           const p = players[id];
+          
+          const playerNumber = p.number ? `(${p.number}) ` : '';
           // Adiciona um indicador 'VOCÊ' se for o jogador local
           const nameDisplay = p.name + (id === playerId ? " (VOCÊ)" : "");
 
