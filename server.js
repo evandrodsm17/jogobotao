@@ -680,6 +680,14 @@ function balanceTeams() {
 
   // Caso 1: Bot necessário e não está presente, ou está no time errado
   if (teamToHelp && (!botIsActive || botTeam !== teamToHelp)) {
+    let botName;
+    if (teamToHelp === 1) {
+      botName = "RAFAEL";
+    } else {
+      // teamToHelp === 2
+      botName = "MARCELAO";
+    }
+
     console.log(`[BOT] Adicionando/Movendo BOT para o Time ${teamToHelp}`);
 
     // Posição inicial do Bot (zagueiro no meio-campo)
