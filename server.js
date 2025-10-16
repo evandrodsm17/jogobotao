@@ -147,9 +147,9 @@ setInterval(() => {
       p.x -= Math.cos(angle) * overlap;
       p.y -= Math.sin(angle) * overlap; // É essencial sincronizar a posição corrigida do jogador
 
-      const conductionFactor = 0.2;
+      const conductionFactor = 0.3;
 
-      const playerTouchSpeed = 1.5; // Simula a velocidade do empurrão do jogador
+      const playerTouchSpeed = 2; // Simula a velocidade do empurrão do jogador
 
       bola.vy =
         bola.vy * (1 - conductionFactor) +
