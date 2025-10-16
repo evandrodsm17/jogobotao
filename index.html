@@ -512,7 +512,10 @@
             gameOverScreenEl.style.display = "flex";
 
             // Para o loop de input do jogador (IMPORTANTE: Evita movimento após o fim)
-            if (inputInterval) clearInterval(inputInterval);
+            if (inputInterval){
+              clearInterval(inputInterval);
+              inputInterval = null;
+            }
             break;
 
           case "gameRestarted":
