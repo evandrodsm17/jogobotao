@@ -17,6 +17,116 @@
         border: 2px solid white;
       }
 
+      /* NOVO ESTILO: Animação de entrada para Game Over */
+      @keyframes slide-in-fade {
+        0% {
+          opacity: 0;
+          transform: translate(-50%, -100%);
+        } /* Começa acima e invisível */
+        100% {
+          opacity: 1;
+          transform: translate(-50%, -50%);
+        } /* Desliza para o centro e fica visível */
+      }
+
+      #gameOverScreen {
+        position: fixed; /* Use fixed para cobrir toda a viewport */
+        top: 50%; /* Centraliza verticalmente */
+        left: 50%; /* Centraliza horizontalmente */
+        transform: translate(-50%, -50%); /* Ajuste fino de centralização */
+        width: 100%;
+        height: 100%;
+        /* Gradiente suave de fundo */
+        background: linear-gradient(
+          45deg,
+          rgba(0, 0, 0, 0.9),
+          rgba(50, 0, 0, 0.8)
+        );
+        color: white;
+        display: none;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        z-index: 20;
+
+        /* Propriedades da animação */
+        animation-duration: 0.8s; /* Duração da animação de entrada */
+        animation-timing-function: ease-out; /* Suavidade da animação */
+        animation-fill-mode: forwards; /* Mantém o estado final da animação */
+      }
+
+      /* Classe para ativar a animação de entrada */
+      .game-over-active {
+        animation-name: slide-in-fade;
+      }
+
+      #winnerMessage {
+        font-size: 4em;
+        text-shadow: 3px 3px 8px rgba(0, 0, 0, 0.7); /* Sombra mais forte */
+        margin-bottom: 20px;
+      }
+
+      #restartButton {
+        padding: 15px 35px; /* Aumenta um pouco */
+        font-size: 1.6em;
+        margin-top: 30px;
+        cursor: pointer;
+        background: #4caf50; /* Verde vibrante */
+        color: white;
+        border: none;
+        border-radius: 8px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
+        transition: background 0.3s ease, transform 0.2s ease; /* Transição suave */
+      }
+
+      #restartButton:hover {
+        background: #66bb6a; /* Cor mais clara ao passar o mouse */
+        transform: translateY(-2px); /* Efeito de "levantar" */
+      }
+
+      /* NOVO ESTILO: Animação para mensagens de evento */
+      @keyframes fade-zoom {
+        0% {
+          opacity: 0;
+          transform: translate(-50%, -20px) scale(0.8);
+        }
+        10% {
+          opacity: 1;
+          transform: translate(-50%, 0px) scale(1);
+        }
+        90% {
+          opacity: 1;
+          transform: translate(-50%, 0px) scale(1);
+        }
+        100% {
+          opacity: 0;
+          transform: translate(-50%, -20px) scale(0.8);
+        }
+      }
+
+      #eventMessage {
+        /* Estilos existentes */
+        position: absolute;
+        top: 150px;
+        left: 50%;
+        transform: translateX(-50%); /* Garante centralização inicial */
+        color: yellow;
+        font-size: 2.5em;
+        font-weight: bold;
+        text-shadow: 2px 2px 5px black;
+        z-index: 10;
+        display: none; /* Inicia escondido */
+
+        /* NOVAS PROPRIEDADES DE ANIMAÇÃO */
+        animation-duration: 4s; /* Duração da animação (deve ser igual ao `duration` do displayEventMessage) */
+        animation-fill-mode: forwards; /* Mantém o estado final da animação (opacity: 0) */
+      }
+
+      /* Classe para ativar a animação */
+      .event-message-active {
+        animation-name: fade-zoom;
+      }
+
       .painel-placar {
         /* Novo nome de classe/ID para o bloco central */
         width: 200px;
@@ -170,8 +280,7 @@
         margin: 0 auto;
       "
     >
-      <div
-        id="team1Panel" class="teamPanel">
+      <div id="team1Panel" class="teamPanel">
         <h3>EC VITÓRIA</h3>
         <ul id="team1List">
           <li>Nenhum jogador...</li>
@@ -180,14 +289,11 @@
 
       <div class="painel-placar">
         <p id="time">03:00</p>
-        <p id="score">
-          0 <span class="score-separator">x</span> 0
-        </p>
+        <p id="score">0 <span class="score-separator">x</span> 0</p>
         <p id="status">Conectando...</p>
       </div>
 
-      <div
-        id="team2Panel" class="teamPanel">
+      <div id="team2Panel" class="teamPanel">
         <h3>EC BAHIA</h3>
         <ul id="team2List">
           <li>Nenhum jogador...</li>
@@ -535,9 +641,11 @@
       function displayEventMessage(message, duration = 3000) {
         eventMessageEl.textContent = message;
         eventMessageEl.style.display = "block";
+        eventMessageEl.classList.add("event-message-active"); // ADICIONA A CLASSE PARA INICIAR A ANIMAÇÃO
 
-        // Oculta a mensagem após o tempo determinado
         setTimeout(() => {
+          eventMessageEl.classList.remove("event-message-active"); // REMOVE A CLASSE
+          // Oculta após a animação (ou ligeiramente antes se o fade-out for rápido)
           eventMessageEl.style.display = "none";
         }, duration);
       }
@@ -648,6 +756,7 @@
             // Exibe a tela de Game Over
             winnerMessageEl.textContent = winnerName;
             gameOverScreenEl.style.display = "flex";
+            gameOverScreenEl.classList.add("game-over-active"); // ADICIONA A CLASSE PARA INICIAR A ANIMAÇÃO
 
             // Para o loop de input do jogador (IMPORTANTE: Evita movimento após o fim)
             if (inputInterval) {
@@ -658,7 +767,9 @@
 
           case "gameRestarted":
             // Esconde tela de Game Over (se ainda estiver visível)
+
             gameOverScreenEl.style.display = "none";
+            gameOverScreenEl.classList.remove("game-over-active"); // REMOVE A CLASSE
 
             // Reseta a UI do placar e tempo
             score = msg.score; // 0x0
