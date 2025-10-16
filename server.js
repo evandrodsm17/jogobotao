@@ -1,8 +1,12 @@
 const WebSocket = require("ws");
 const { v4: uuidv4 } = require("uuid");
 
-const wss = new WebSocket.Server({ port: 8080 });
-console.log("🚀 Servidor rodando na porta 8080");
+const PORT = process.env.PORT || 8080;
+
+// 2. Cria o servidor WS usando a porta dinâmica
+const wss = new WebSocket.Server({ port: PORT });
+
+console.log(`🚀 Servidor rodando na porta ${PORT}`);
 
 const WIDTH = 800;
 const HEIGHT = 500;
@@ -339,32 +343,32 @@ function resetBola() {
 // server.js: Adicione esta nova função no final do arquivo (após resetBola())
 
 function restartGame() {
-    // 1. Resetar placar e tempo
-    score[1] = 0;
-    score[2] = 0;
-    gameTime = 180; // 3 minutos
-    isKickOffActive = false; // NOVO: Limpa o estado de Kick-off
-    kickOffTeam = null;      // NOVO: Limpa o time da saída de bola
+  // 1. Resetar placar e tempo
+  score[1] = 0;
+  score[2] = 0;
+  gameTime = 180; // 3 minutos
+  isKickOffActive = false; // NOVO: Limpa o estado de Kick-off
+  kickOffTeam = null; // NOVO: Limpa o time da saída de bola
 
-    // 2. Limpar e recriar o loop de tempo
-    if (gameInterval) clearInterval(gameInterval);
-    gameInterval = setInterval(() => {
-        if (gameTime > 0) {
-            gameTime--;
-            broadcast({ type: "update", gameTime }); 
-        } else {
-            // NOVO: Checagem de fim de jogo por tempo (se não for 5x0)
-            clearInterval(gameInterval);
-            broadcast({ type: "gameOver", score });
-        }
-    }, 1000);
+  // 2. Limpar e recriar o loop de tempo
+  if (gameInterval) clearInterval(gameInterval);
+  gameInterval = setInterval(() => {
+    if (gameTime > 0) {
+      gameTime--;
+      broadcast({ type: "update", gameTime });
+    } else {
+      // NOVO: Checagem de fim de jogo por tempo (se não for 5x0)
+      clearInterval(gameInterval);
+      broadcast({ type: "gameOver", score });
+    }
+  }, 1000);
 
-    // 3. Resetar a posição dos jogadores
-    resetAllPlayers(); // NOVO: Usando a nova função
-    
-    // 4. Resetar bola e notificar todos os clientes
-    resetBola();
-    broadcast({ type: "gameRestarted", score }); 
+  // 3. Resetar a posição dos jogadores
+  resetAllPlayers(); // NOVO: Usando a nova função
+
+  // 4. Resetar bola e notificar todos os clientes
+  resetBola();
+  broadcast({ type: "gameRestarted", score });
 }
 
 function resetAllPlayers() {
