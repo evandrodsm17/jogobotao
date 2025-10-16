@@ -47,7 +47,7 @@ const MIDFIELD_X = WIDTH / 2; // 400
 
 const BOT_ID = "bot-player-001";
 const BOT_NAME = "RAFABOT";
-const BOT_SPEED = 1; // Um pouco mais lento que o humano
+const BOT_SPEED = 3; // Um pouco mais lento que o humano
 const BOT_KICK_DISTANCE = 40; // O Bot chuta quando a bola está próxima
 
 // CONSTANTES DE GOL AJUSTADAS
