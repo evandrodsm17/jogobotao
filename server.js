@@ -51,6 +51,11 @@ const GOAL_BOTTOM = GOAL_TOP + GOAL_HEIGHT; // 200 + 100 = 300
 
 const PLAYER_RADIUS = 15; // Raio do jogador consistente
 
+const usedNumbers = {
+  team1: new Set(),
+  team2: new Set(),
+};
+
 let players = {};
 let bola = {
   x: WIDTH / 2,
@@ -264,12 +269,17 @@ wss.on("connection", (ws) => {
           initialPos = team2Positions[index] || { x: 450, y: 200 };
         }
 
+        // *** CÓDIGO NOVO: ATRIBUIÇÃO DE NÚMERO ***
+        const teamIdString = `team${msg.player.team}`;
+        const playerNumber = assignUniquePlayerNumber(teamIdString);
+
         players[playerId] = {
           id: playerId,
           name: msg.player.name,
           team: msg.player.team,
           x: initialPos.x, // POSIÇÃO ATRIBUÍDA PELO SERVIDOR
           y: initialPos.y, // POSIÇÃO ATRIBUÍDA PELO SERVIDOR
+          number: playerNumber, // <--- ADICIONA O NÚMERO
         };
         console.log(
           `Jogador ${msg.player.name} (${playerId}) se juntou ao Time ${msg.player.team}`
@@ -348,7 +358,15 @@ wss.on("connection", (ws) => {
   });
 
   ws.on("close", () => {
+    const player = players[playerId]; // Precisamos obter o objeto player antes de deletá-lo
+    
     console.log(`🔴 Jogador saiu: ${playerId}`);
+
+    if (player) {
+        const teamIdString = `team${player.team}`;
+        releasePlayerNumber(teamIdString, player.number); // <--- LIBERA O NÚMERO
+    }
+    
     delete players[playerId];
     broadcast({ type: "playerLeft", playerId });
   });
@@ -420,5 +438,34 @@ function resetAllPlayers() {
     p.y = initialPos.y;
     // Broadcast para que os clientes atualizem a posição do jogador
     broadcast({ type: "playerUpdate", player: p });
+  }
+}
+
+function assignUniquePlayerNumber(teamId) {
+  const teamSet = usedNumbers[teamId];
+  // Define o limite de números (1 a 11)
+  const availableNumbers = Array.from({ length: 11 }, (_, i) => i + 1).filter(
+    (num) => !teamSet.has(num)
+  );
+
+  // Se não houver números disponíveis (o que só aconteceria com mais de 11 jogadores), retorna null
+  if (availableNumbers.length === 0) {
+    return null;
+  }
+
+  // Escolhe um número aleatório entre os disponíveis
+  const randomIndex = Math.floor(Math.random() * availableNumbers.length);
+  const newNumber = availableNumbers[randomIndex];
+
+  // Adiciona o número ao set de usados
+  teamSet.add(newNumber);
+
+  return newNumber;
+}
+
+// Função para liberar o número quando um jogador desconecta
+function releasePlayerNumber(teamId, number) {
+  if (number) {
+    usedNumbers[teamId].delete(number);
   }
 }

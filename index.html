@@ -551,17 +551,19 @@
           ctx.fillStyle = lineColor;
           ctx.fillRect(p.x - playerRadius, p.y - 1, playerRadius * 2, 2); // Ajuste o '1' e '2' para espessura da linha // 4. Desenha o número "10"
 
-          ctx.fillStyle = "white"; // Cor do número
-          ctx.font = "bold 14px Arial"; // Tamanho e estilo da fonte
-          ctx.textAlign = "center"; // Centraliza o texto horizontalmente
-          ctx.textBaseline = "middle"; // Centraliza o texto verticalmente
-          ctx.fillText("10", p.x, p.y); // Desenha o número na posição do jogador // 5. Desenha o nome do jogador (se ainda quiser)
-
+          if (p.number) {
+            // Usa amarelo para o Time 1 e branco para o Time 2 para melhor contraste
+            ctx.fillStyle = p.team === 1 ? "yellow" : "white";
+            ctx.font = "bold 14px Arial"; // Tamanho e estilo da fonte
+            ctx.textAlign = "center"; // Centraliza o texto horizontalmente
+            ctx.textBaseline = "middle"; // Centraliza o texto verticalmente // Usa o número enviado pelo servidor (convertido para string)
+            ctx.fillText(p.number.toString(), p.x, p.y);
+          } // 5. Desenha o nome do jogador
           ctx.fillStyle = "white";
           ctx.font = "14px Arial";
-          ctx.textAlign = "center"; // Garante que o nome também seja centralizado
-          ctx.textBaseline = "alphabetic"; // Retorna ao default para o nome
-          ctx.fillText(p.name, p.x, p.y - playerRadius - 5); // Posição um pouco acima do jogador
+          ctx.textAlign = "center";
+          ctx.textBaseline = "alphabetic";
+          ctx.fillText(p.name, p.x, p.y - playerRadius - 5);
         }
 
         // Atualiza placar e tempo
@@ -769,6 +771,7 @@
             // Esconde tela de Game Over (se ainda estiver visível)
 
             gameOverScreenEl.style.display = "none";
+            eventMessageEl.classList.remove("event-message-active");
             gameOverScreenEl.classList.remove("game-over-active"); // REMOVE A CLASSE
 
             // Reseta a UI do placar e tempo
