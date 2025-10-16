@@ -45,6 +45,11 @@ const HEIGHT = 500;
 const DIAGONAL_FACTOR = 0.7071; // Fator para manter a velocidade constante na diagonal (1 / sqrt(2))
 const MIDFIELD_X = WIDTH / 2; // 400
 
+const BOT_ID = "bot-player-001";
+const BOT_NAME = "RAFABOT";
+const BOT_SPEED = 4; // Um pouco mais lento que o humano
+const BOT_KICK_DISTANCE = 40; // O Bot chuta quando a bola está próxima
+
 // CONSTANTES DE GOL AJUSTADAS
 const GOAL_HEIGHT = 100; // Gol de 100px de altura
 const GOAL_TOP = (HEIGHT - GOAL_HEIGHT) / 2; // (500 - 100) / 2 = 200
@@ -124,7 +129,9 @@ setInterval(() => {
   } else if (bola.y + bola.raio > HEIGHT) {
     bola.vy *= -1;
     bola.y = HEIGHT - bola.raio; // Força a bola a sair da parede
-  } // ------------------------------------------------------------------ // Colisão com jogadores
+  } // ------------------------------------------------------------------ 
+
+// Colisão com jogadores
   for (let id in players) {
     const p = players[id];
     let dx = bola.x - p.x;
@@ -147,6 +154,12 @@ setInterval(() => {
       broadcast({ type: "playerUpdate", player: p });
     }
   } // ------------------------------------------------------------------ // Lógica de GOL (Agora usando GOAL_TOP/BOTTOM e checagem de centro) // ------------------------------------------------------------------ // Gol Time 2 (Esquerda) // Gol Time 2 (Esquerda)
+
+  if (players[BOT_ID]) {
+        handleBotMovement(players[BOT_ID], bola);
+        // Garante que o cliente tenha a nova posição do bot
+        broadcast({ type: "playerUpdate", player: players[BOT_ID] }); 
+    }
 
   // server.js: Modifique a Lógica de GOL (dentro do loop setInterval)
 
@@ -477,3 +490,170 @@ function releasePlayerNumber(teamId, number) {
     usedNumbers[teamId].delete(number);
   }
 }
+
+function calculateIdealBotPosition(bot, ball) {
+    const goalX = bot.team === 1 ? 0 : WIDTH; // Gol do Time 1 em X=0, Time 2 em X=800
+    const goalY = HEIGHT / 2;
+    const playerRadius = PLAYER_RADIUS;
+
+    // 1. Encontra o vetor da bola para o gol
+    const dxGoal = goalX - ball.x;
+    const dyGoal = goalY - ball.y;
+
+    // 2. Normaliza e define a distância do Bot em relação ao gol.
+    // O Bot deve tentar ficar a uma distância segura da bola, mas entre ela e o gol.
+    // Distância do gol: ex: 150 pixels
+    const botDistanceToGoal = 150; 
+    
+    // 3. Calcula a posição ideal (ponto na linha bola -> gol, a 150px do gol)
+    const totalDistance = Math.sqrt(dxGoal * dxGoal + dyGoal * dyGoal);
+    
+    let idealX;
+    let idealY;
+
+    if (totalDistance > 0) {
+        // Interpolação linear: calcula o ponto na linha
+        const ratio = (totalDistance - botDistanceToGoal) / totalDistance;
+        idealX = ball.x + dxGoal * ratio;
+        idealY = ball.y + dyGoal * ratio;
+    } else {
+        // Bola parada no centro: Bot volta para a posição inicial
+        idealX = bot.team === 1 ? WIDTH / 4 : WIDTH * 3 / 4;
+        idealY = HEIGHT / 2;
+    }
+
+    // 4. Limita a posição X para o lado do campo do Bot (para defesa)
+    if (bot.team === 1) {
+        // Time 1 (esquerda): X deve ser < MIDFIELD_X
+        idealX = Math.min(idealX, MIDFIELD_X - playerRadius);
+    } else {
+        // Time 2 (direita): X deve ser > MIDFIELD_X
+        idealX = Math.max(idealX, MIDFIELD_X + playerRadius);
+    }
+    
+    // 5. Aplica clamping de bordas (como em um jogador normal)
+    idealX = Math.max(playerRadius, Math.min(idealX, WIDTH - playerRadius));
+    idealY = Math.max(playerRadius, Math.min(idealY, HEIGHT - playerRadius));
+
+    return { x: idealX, y: idealY };
+}
+
+
+function handleBotMovement(bot, bola) {
+    // 1. Calculamos onde o Bot *deveria* estar
+    const idealPos = calculateIdealBotPosition(bot, bola);
+    
+    // 2. Calculamos o vetor de movimento do Bot para a posição ideal
+    let dx = idealPos.x - bot.x;
+    let dy = idealPos.y - bot.y;
+    const distToIdeal = Math.sqrt(dx * dx + dy * dy);
+    
+    // 3. Normaliza o vetor e move o Bot na velocidade definida
+    if (distToIdeal > 1) { // Só move se estiver longe da posição ideal
+        dx = dx / distToIdeal;
+        dy = dy / distToIdeal;
+        
+        bot.x += dx * BOT_SPEED;
+        bot.y += dy * BOT_SPEED;
+        
+        // Aplica o clamping de borda do campo (garante que não saia)
+        bot.x = Math.max(PLAYER_RADIUS, Math.min(bot.x, WIDTH - PLAYER_RADIUS));
+        bot.y = Math.max(PLAYER_RADIUS, Math.min(bot.y, HEIGHT - PLAYER_RADIUS));
+    }
+    
+    // 4. Lógica de CHUTE (Se a bola estiver perto)
+    const dx_kick = bola.x - bot.x;
+    const dy_kick = bola.y - bot.y;
+    const distToBall = Math.sqrt(dx_kick * dx_kick + dy_kick * dy_kick);
+
+    if (distToBall < BOT_KICK_DISTANCE) {
+        // Chute simples: apenas empurra a bola para longe
+        const angle = Math.atan2(dy_kick, dx_kick);
+        const force = 18; // Força do chute do Bot
+        
+        // O Bot só chuta se a bola estiver se movendo *em direção* ao gol dele (lógica defensiva)
+        // O bot do time 1 (esquerda) só chuta se a bola estiver movendo para X crescente (para a direita)
+        if (bot.team === 1 && bola.vx > 0) {
+             bola.vx = Math.cos(angle) * force;
+             bola.vy = Math.sin(angle) * force;
+             bola.lastTouchId = bot.id;
+             bola.lastTouchName = bot.name;
+        } 
+        // O bot do time 2 (direita) só chuta se a bola estiver movendo para X decrescente (para a esquerda)
+        else if (bot.team === 2 && bola.vx < 0) {
+             bola.vx = Math.cos(angle) * force;
+             bola.vy = Math.sin(angle) * force;
+             bola.lastTouchId = bot.id;
+             bola.lastTouchName = bot.name;
+        }
+        
+        // IMPORTANTE: Bloqueamos o movimento do bot durante o kick-off para evitar que ele inicie o jogo
+        // Apenas jogadores humanos devem fazer o kick-off
+        // Se a lógica do kick-off for baseada no player, essa parte não será executada pelo Bot
+    }
+}
+
+
+function balanceTeams() {
+    let teamCount = { 1: 0, 2: 0 };
+    let botIsActive = false;
+    let botTeam = null;
+
+    // 1. Conta jogadores e checa Bot
+    for (const id in players) {
+        if (id === BOT_ID) {
+            botIsActive = true;
+            botTeam = players[id].team;
+        } else {
+            teamCount[players[id].team]++;
+        }
+    }
+
+    const diff = Math.abs(teamCount[1] - teamCount[2]);
+    let teamToHelp = null;
+
+    if (diff >= 1) { // Decide se precisa de Bot
+        if (teamCount[1] < teamCount[2]) {
+            teamToHelp = 1;
+        } else if (teamCount[2] < teamCount[1]) {
+            teamToHelp = 2;
+        }
+    }
+    
+    // 2. Lógica de Adicionar/Mover/Remover Bot
+    
+    // Caso 1: Bot necessário e não está presente, ou está no time errado
+    if (teamToHelp && (!botIsActive || botTeam !== teamToHelp)) {
+        console.log(`[BOT] Adicionando/Movendo BOT para o Time ${teamToHelp}`);
+        
+        // Posição inicial do Bot (zagueiro no meio-campo)
+        const startX = teamToHelp === 1 ? MIDFIELD_X - 100 : MIDFIELD_X + 100;
+        const startY = HEIGHT / 2;
+
+        players[BOT_ID] = {
+            id: BOT_ID,
+            name: BOT_NAME,
+            team: teamToHelp,
+            x: startX,
+            y: startY,
+            number: 99, // Um número distintivo
+        };
+        // Notifica todos os clientes que um novo "jogador" (Bot) se juntou
+        broadcast({ type: "newPlayer", player: players[BOT_ID] });
+        return;
+    }
+    
+    // Caso 2: Equipe balanceada e Bot está presente (Bot deve ser removido)
+    if (!teamToHelp && botIsActive) {
+        console.log("[BOT] Removendo BOT. Times equilibrados.");
+        delete players[BOT_ID];
+        // Notifica todos os clientes que o Bot saiu
+        broadcast({ type: "playerLeft", playerId: BOT_ID });
+        return;
+    }
+    
+    // Caso 3: Bot está presente e no time correto (apenas atualiza sua posição no loop principal)
+    // Nenhuma ação aqui, a atualização do Bot é feita no gameLoop.
+}
+
+setInterval(balanceTeams, 5000);
