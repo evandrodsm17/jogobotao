@@ -39,6 +39,8 @@
       let playerId = null;
       let players = {};
       let bola = { x: 300, y: 200, raio: 8 };
+      let keysPressed = {};
+      let inputInterval = null; // Para o loop de envio de input
       let score = { 1: 0, 2: 0 };
       let gameTime = 180;
 
@@ -53,9 +55,11 @@
       //   { x: 500, y: 200 },
       //   { x: 500, y: 300 },
       // ];
+      // index.html: Adicione esta função, substituindo promptName()
 
-      function promptName() {
+      function promptTeamAndName() {
         let playerName = null;
+        let playerTeam = null;
         const maxLength = 10;
 
         // Loop para forçar o usuário a digitar um nome válido
@@ -68,21 +72,37 @@
             `Escolha seu nome de jogador (máx. ${maxLength} caracteres):`
           );
 
-          // Se o usuário clicar em Cancelar
           if (playerName === null) {
-            playerName = "Player"; // Nome padrão para evitar loop infinito
+            playerName = "Player"; // Nome padrão se cancelar
+            break;
+          }
+          playerName = playerName.trim().substring(0, maxLength);
+
+          if (playerName.length === 0) {
+            alert("Por favor, digite um nome válido.");
+          }
+        }
+
+        // Loop para forçar o usuário a escolher um time
+        while (playerTeam !== 1 && playerTeam !== 2) {
+          let teamInput = window.prompt(
+            `Olá, ${playerName}! Escolha seu time:\n\n1 - VITÓRIA\n2 - BAHIA`
+          );
+
+          if (teamInput === null) {
+            playerTeam = 1; // Time padrão se cancelar
             break;
           }
 
-          playerName = playerName.trim();
-
-          if (playerName.length > maxLength) {
-            alert(
-              `O nome deve ter no máximo ${maxLength} caracteres. Tente novamente.`
-            );
+          const teamNum = parseInt(teamInput.trim());
+          if (teamNum === 1 || teamNum === 2) {
+            playerTeam = teamNum;
+          } else {
+            alert("Escolha inválida. Por favor, digite 1 ou 2.");
           }
         }
-        return playerName.substring(0, maxLength); // Garante que o nome não passe de 10
+
+        return { name: playerName, team: playerTeam };
       }
 
       // function assignPosition(player) {
@@ -95,7 +115,7 @@
         // Constantes de dimensão (mantidas)
         const playerGoalWidth = 15;
         const goalAreaWidth = 70;
-        const goalAreaHeight = 150;
+        const goalAreaHeight = 100;
         const goalY = (HEIGHT - goalAreaHeight) / 2; // 100
 
         ctx.strokeStyle = "white";
@@ -104,7 +124,12 @@
 
         // Desenha as traves (Gols) - Retângulos preenchidos
         ctx.fillRect(0, goalY, playerGoalWidth, goalAreaHeight);
-        ctx.fillRect(WIDTH - playerGoalWidth, goalY, playerGoalWidth, goalAreaHeight);
+        ctx.fillRect(
+          WIDTH - playerGoalWidth,
+          goalY,
+          playerGoalWidth,
+          goalAreaHeight
+        );
 
         // --- GRUPO 1: LINHAS RETAS E ÁREAS (USAM UM ÚNICO STROKE) ---
         ctx.beginPath();
@@ -201,6 +226,35 @@
         timeEl.textContent = `${min}:${sec}`;
       }
 
+      // index.html: Adicione a função para determinar a direção
+
+      function getCombinedDirection() {
+        let direction = "";
+        if (keysPressed.up) direction += "up";
+        if (keysPressed.down) direction += "down";
+        if (keysPressed.left) direction += "Left";
+        if (keysPressed.right) direction += "Right";
+
+        // Se a tecla de kick estiver pressionada, priorizamos o kick
+        if (keysPressed.kick) return "kick";
+
+        // Se não houver movimento, retorna null
+        return direction || null;
+      }
+
+      // index.html: Adicione este loop de envio de input (ex: 30ms = 33 vezes por segundo)
+      inputInterval = setInterval(() => {
+        if (!playerId) return;
+
+        const input = getCombinedDirection();
+
+        if (input) {
+          // Envia a direção combinada para o servidor (ex: "upLeft", "downRight", "kick")
+          ws.send(JSON.stringify({ type: "input", playerId, input }));
+        }
+      }, 30); // Frequência do envio de input
+
+      
       ws.onopen = () => {
         console.log("✅ Conectado ao servidor");
         status.textContent = "Conectado!";
@@ -211,15 +265,18 @@
         switch (msg.type) {
           case "welcome":
             playerId = msg.playerId;
-            const team = msg.team;
-            const playerName = promptName(); 
+
+            // NOVO: Coleta nome e time
+            const playerInfo = promptTeamAndName();
+            const playerName = playerInfo.name;
+            const team = playerInfo.team; // Usa o time escolhido
 
             ws.send(
-              JSON.stringify({ 
-                type: "newPlayer", 
-                player: { id: playerId, name: playerName, team }
-        })
-      );
+              JSON.stringify({
+                type: "newPlayer",
+                player: { id: playerId, name: playerName, team },
+              })
+            );
             break;
 
           case "stateSync":
@@ -266,14 +323,30 @@
 
       // Captura inputs do jogador
       document.addEventListener("keydown", (e) => {
-        if (!playerId) return;
-        let input = null;
-        if (e.key === "ArrowUp") input = "up";
-        if (e.key === "ArrowDown") input = "down";
-        if (e.key === "ArrowLeft") input = "left";
-        if (e.key === "ArrowRight") input = "right";
-        if (e.code === "Space") input = "kick"; // chute
-        if (input) ws.send(JSON.stringify({ type: "input", playerId, input }));
+        // Teclas que queremos rastrear
+        if (e.key === "ArrowUp") keysPressed.up = true;
+        if (e.key === "ArrowDown") keysPressed.down = true;
+        if (e.key === "ArrowLeft") keysPressed.left = true;
+        if (e.key === "ArrowRight") keysPressed.right = true;
+        if (e.code === "Space") keysPressed.kick = true; // Rastreia o chute também
+
+        // Previne o comportamento padrão (ex: scroll da página)
+        if (
+          keysPressed.up ||
+          keysPressed.down ||
+          keysPressed.left ||
+          keysPressed.right
+        ) {
+          e.preventDefault();
+        }
+      });
+
+      document.addEventListener("keyup", (e) => {
+        if (e.key === "ArrowUp") keysPressed.up = false;
+        if (e.key === "ArrowDown") keysPressed.down = false;
+        if (e.key === "ArrowLeft") keysPressed.left = false;
+        if (e.key === "ArrowRight") keysPressed.right = false;
+        if (e.code === "Space") keysPressed.kick = false;
       });
 
       // Loop de desenho

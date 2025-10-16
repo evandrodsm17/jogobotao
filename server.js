@@ -4,89 +4,108 @@ const { v4: uuidv4 } = require("uuid");
 const wss = new WebSocket.Server({ port: 8080 });
 console.log("🚀 Servidor rodando na porta 8080");
 
-const WIDTH = 800, HEIGHT = 500;
+const WIDTH = 800;
+const HEIGHT = 500;
+const DIAGONAL_FACTOR = 0.7071; // Fator para manter a velocidade constante na diagonal (1 / sqrt(2))
+
+// CONSTANTES DE GOL AJUSTADAS
+const GOAL_HEIGHT = 100; // Gol de 100px de altura
+const GOAL_TOP = (HEIGHT - GOAL_HEIGHT) / 2; // (500 - 100) / 2 = 200
+const GOAL_BOTTOM = GOAL_TOP + GOAL_HEIGHT; // 200 + 100 = 300
+
+const PLAYER_RADIUS = 15; // Raio do jogador consistente
+
 let players = {};
-let bola = { x: WIDTH / 2, y: HEIGHT / 2, vx: 0, vy: 0, raio: 10 }; // NOVO: Raio da bola (ex: 10)
+let bola = { x: WIDTH / 2, y: HEIGHT / 2, vx: 0, vy: 0, raio: 10 };
 
 const team1Positions = [
-  { x: 120, y: 120 }, // Posições mais distantes das bordas
-  { x: 120, y: 250 },
-  { x: 120, y: 380 },
+  { x: 120, y: 120 },
+  { x: 120, y: 250 },
+  { x: 120, y: 380 },
 ];
 
 const team2Positions = [
-  { x: 680, y: 120 }, // Posições no lado oposto (800 - 120 = 680)
-  { x: 680, y: 250 },
-  { x: 680, y: 380 },
+  { x: 680, y: 120 },
+  { x: 680, y: 250 },
+  { x: 680, y: 380 },
 ];
 
-// ADICIONE ESTA LINHA:
 let teamCount = { 1: 0, 2: 0 };
 const score = { 1: 0, 2: 0 };
 let gameTime = 180; // 3 minutos em segundos
 let gameInterval = null;
+
 // Atualiza física da bola a cada frame
 setInterval(() => {
   // Atualiza posição
   bola.x += bola.vx;
-  bola.y += bola.vy;
+  bola.y += bola.vy; // Atrito da bola
 
-  // Atrito da bola
   bola.vx *= 0.98;
-  bola.vy *= 0.98;
+  bola.vy *= 0.98; // ------------------------------------------------------------------ // CORREÇÃO 1: NOVA LÓGICA DE REBOTE E COLISÃO DE PAREDES // ------------------------------------------------------------------ // Colisão com a parede esquerda (FORA da área do gol)
 
-  // Rebote nas paredes
-  if (bola.x - bola.raio < 0 && (bola.y < 150 || bola.y > 250)) bola.vx *= -1;
-  if (bola.x + bola.raio > WIDTH && (bola.y < 150 || bola.y > 250))
+  if (bola.x - bola.raio < 0 && (bola.y < GOAL_TOP || bola.y > GOAL_BOTTOM)) {
     bola.vx *= -1;
-  if (bola.y - bola.raio < 0 || bola.y + bola.raio > HEIGHT) bola.vy *= -1;
+    bola.x = bola.raio; // Força a bola a sair da parede
+  } // Colisão com a parede direita (FORA da área do gol)
+  else if (
+    bola.x + bola.raio > WIDTH &&
+    (bola.y < GOAL_TOP || bola.y > GOAL_BOTTOM)
+  ) {
+    bola.vx *= -1;
+    bola.x = WIDTH - bola.raio; // Força a bola a sair da parede
+  } // Colisão com as paredes superior/inferior
 
-  // Colisão com jogadores
+  if (bola.y - bola.raio < 0) {
+    bola.vy *= -1;
+    bola.y = bola.raio; // Força a bola a sair da parede
+  } else if (bola.y + bola.raio > HEIGHT) {
+    bola.vy *= -1;
+    bola.y = HEIGHT - bola.raio; // Força a bola a sair da parede
+  } // ------------------------------------------------------------------ // Colisão com jogadores
   for (let id in players) {
     const p = players[id];
     let dx = bola.x - p.x;
     let dy = bola.y - p.y;
     let dist = Math.sqrt(dx * dx + dy * dy);
-    const playerRadius = 15;
+    const playerRadius = PLAYER_RADIUS; // Usa a constante definida no topo
 
     if (dist < bola.raio + playerRadius) {
       // 15 = raio do jogador
       let angle = Math.atan2(dy, dx);
       let force = 12;
       bola.vx = Math.cos(angle) * force;
-      bola.vy = Math.sin(angle) * force;
-      // Empurra jogador levemente pra fora da bola
+      bola.vy = Math.sin(angle) * force; // Empurra jogador levemente pra fora da bola
       const overlap = bola.raio + playerRadius - dist;
       p.x -= Math.cos(angle) * overlap;
-      p.y -= Math.sin(angle) * overlap;
+      p.y -= Math.sin(angle) * overlap; // É essencial sincronizar a posição corrigida do jogador
 
-      // É essencial sincronizar a posição corrigida do jogador
       broadcast({ type: "playerUpdate", player: p });
     }
-  }
+  } // ------------------------------------------------------------------ // Lógica de GOL (Agora usando GOAL_TOP/BOTTOM e checagem de centro) // ------------------------------------------------------------------ // Gol Time 2 (Esquerda)
 
-  // Lógica de GOL (Reinserida)
-  const goalLineY1 = (HEIGHT - 100) / 2; // (500 - 100) / 2 = 200
-  const goalLineY2 = goalLineY1 + 100; // 200 + 100 = 300
-
-  // Gol Time 2 (Esquerda)
-  if (bola.x - bola.raio <= 0 && bola.y >= goalLineY1 && bola.y <= goalLineY2) {
-    score[2]++;
-    broadcast({ type: "scoreUpdate", score });
-    resetBola();
-  }
-  // Gol Time 1 (Direita)
+  if (bola.x - bola.raio <= 0 && bola.y >= GOAL_TOP && bola.y <= GOAL_BOTTOM) {
+    // Para ser gol, o centro da bola deve ter cruzado o limite
+    if (bola.x < 0) {
+      score[2]++;
+      broadcast({ type: "scoreUpdate", score });
+      resetBola();
+      return;
+    }
+  } // Gol Time 1 (Direita)
   else if (
-    bola.x + bola.raio >= WIDTH &&
-    bola.y >= goalLineY1 &&
-    bola.y <= goalLineY2
-  ) {
-    score[1]++;
-    broadcast({ type: "scoreUpdate", score });
-    resetBola();
-  }
-
-  // Envia atualização da bola pra todos
+    bola.x + bola.raio >= WIDTH &&
+    bola.y >= GOAL_TOP &&
+    bola.y <= GOAL_BOTTOM
+  ) {
+    // Para ser gol, o centro da bola deve ter cruzado o limite
+    if (bola.x > WIDTH) {
+      score[1]++;
+      broadcast({ type: "scoreUpdate", score });
+      resetBola();
+      return;
+    }
+  } // ------------------------------------------------------------------ // Envia atualização da bola pra todos
   broadcast({ type: "update", bola });
 }, 1000 / 60); // Roda a 60 FPS (melhor para física)
 
@@ -103,13 +122,11 @@ gameInterval = setInterval(() => {
 
 wss.on("connection", (ws) => {
   const playerId = uuidv4();
-  const team = teamCount[1] <= teamCount[2] ? 1 : 2; // Servidor calcula o time
-  teamCount[team]++;
-  ws.id = playerId;
-  console.log(`🟢 Novo jogador conectado: ${playerId}`);
 
-  // Envia ID e estado inicial
-  ws.send(JSON.stringify({ type: "welcome", playerId, team }));
+  ws.id = playerId;
+  console.log(`🟢 Novo jogador conectado: ${playerId}`); // Envia ID e estado inicial
+
+  ws.send(JSON.stringify({ type: "welcome", playerId }));
   ws.send(JSON.stringify({ type: "stateSync", players, bola }));
 
   ws.on("message", (data) => {
@@ -122,11 +139,20 @@ wss.on("connection", (ws) => {
 
     switch (msg.type) {
       case "newPlayer":
-        // ATRIBUIÇÃO DE POSIÇÃO NO SERVIDOR (NOVO CÓDIGO)
-        let initialPos = null;
-        // Usa a contagem atualizada. teamCount[team] - 1 deve ser o índice correto.
+        const incomingTeam = msg.player.team; // Pega o time escolhido pelo cliente // ATRIBUIÇÃO DE POSIÇÃO NO SERVIDOR
+
+        if (incomingTeam === 1 || incomingTeam === 2) {
+          teamCount[incomingTeam]++;
+        } else {
+          // Se o time for inválido, defina um padrão seguro (Time 1)
+          msg.player.team = 1;
+          teamCount[1]++;
+        }
+
+        let initialPos;
+
+        // Usa o time vindo do cliente (e corrigido acima)
         if (msg.player.team === 1) {
-          // Garante que não ultrapassa o limite do array
           const index = Math.min(teamCount[1] - 1, team1Positions.length - 1);
           initialPos = team1Positions[index] || { x: 150, y: 200 };
         } else {
@@ -136,8 +162,8 @@ wss.on("connection", (ws) => {
 
         players[playerId] = {
           id: playerId,
-          name: msg.player.name, // <--- USA O NOME ENVIADO PELO CLIENTE
-          team: msg.player.team, // Adicione o team para garantir consistência          x: msg.player.x || 150,
+          name: msg.player.name,
+          team: msg.player.team,
           x: initialPos.x, // POSIÇÃO ATRIBUÍDA PELO SERVIDOR
           y: initialPos.y, // POSIÇÃO ATRIBUÍDA PELO SERVIDOR
         };
@@ -152,43 +178,52 @@ wss.on("connection", (ws) => {
         const p = players[msg.playerId];
         if (!p) return;
         const speed = 5;
-        const playerRadius = 12; // Já definido para a bola, mas bom explicitar aqui também
+        const playerRadius = PLAYER_RADIUS;
 
-        switch (msg.input) {
-          case "up":
-            p.y -= speed;
-            break;
-          case "down":
-            p.y += speed;
-            break;
-          case "left":
-            p.x -= speed;
-            break;
-          case "right":
-            p.x += speed;
-            break;
-          case "kick": // chute
-            {
-              // direção da bola relativa ao jogador
-              const dx = bola.x - p.x;
-              const dy = bola.y - p.y;
-              const dist = Math.sqrt(dx * dx + dy * dy);
-              if (dist < 50) {
-                // só permite chute se a bola estiver perto do jogador
-                const angle = Math.atan2(dy, dx);
-                const force = 36; // 12 (normal) * 3
-                bola.vx = Math.cos(angle) * force;
-                bola.vy = Math.sin(angle) * force;
-              }
-            }
-            break;
+        let dx = 0;
+        let dy = 0;
+        let finalSpeed = speed;
+
+        // NOVO: Lógica para calcular a direção X e Y combinada
+        const input = msg.input;
+
+        if (input.includes("up")) dy -= 1;
+        if (input.includes("down")) dy += 1;
+        if (input.includes("Left")) dx -= 1;
+        if (input.includes("Right")) dx += 1;
+
+        // Verifica se é movimento diagonal
+        if (dx !== 0 && dy !== 0) {
+          finalSpeed = speed * DIAGONAL_FACTOR;
         }
 
-        // ADICIONE ESTA LÓGICA DE CLAMPING PARA O JOGADOR
-        p.x = Math.max(playerRadius, Math.min(p.x, WIDTH - playerRadius));
-        p.y = Math.max(playerRadius, Math.min(p.y, HEIGHT - playerRadius));
+        p.x += dx * finalSpeed;
+        p.y += dy * finalSpeed;
 
-        // envia posição final para todos
+        // Lógica de chute
+        if (input === "kick") {
+          // Agora o chute é uma direção enviada pelo loop
+          // ... (A sua lógica de chute original deve vir aqui)
+          {
+            // direção da bola relativa ao jogador
+            const dx_kick = bola.x - p.x;
+            const dy_kick = bola.y - p.y;
+            const dist = Math.sqrt(dx_kick * dx_kick + dy_kick * dy_kick);
+            if (dist < 50) {
+              const angle = Math.atan2(dy_kick, dx_kick);
+              const force = 36;
+              bola.vx = Math.cos(angle) * force;
+              bola.vy = Math.sin(angle) * force;
+            }
+          }
+        } // ADICIONE ESTA LÓGICA DE CLAMPING PARA O JOGADOR
+
+        // REMOVA TODO O switch (msg.input) antigo que lidava com 'up', 'down', etc.
+        // E substitua pelo novo código de cálculo de dx/dy e chute acima.
+
+        p.x = Math.max(playerRadius, Math.min(p.x, WIDTH - playerRadius));
+        p.y = Math.max(playerRadius, Math.min(p.y, HEIGHT - playerRadius)); // envia posição final para todos
+
         broadcast({ type: "playerUpdate", player: p });
         break;
     }
@@ -213,7 +248,6 @@ function resetBola() {
   bola.x = WIDTH / 2;
   bola.y = HEIGHT / 2;
   bola.vx = 0;
-  bola.vy = 0;
-  // broadcast do reset da bola para o cliente
+  bola.vy = 0; // broadcast do reset da bola para o cliente
   broadcast({ type: "update", bola });
 }
