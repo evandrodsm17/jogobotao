@@ -1,12 +1,30 @@
 const WebSocket = require("ws");
+const http = require("http"); // NOVO: Módulo HTTP nativo do Node.js
 const { v4: uuidv4 } = require("uuid");
 
+// --- Configuração da Porta ---
 const PORT = process.env.PORT || 8080;
 
-// 2. Cria o servidor WS usando a porta dinâmica
-const wss = new WebSocket.Server({ port: PORT });
+// --- 1. Cria um Servidor HTTP NATIVO ---
+const server = http.createServer((req, res) => {
+  // ESSENCIAL: Responde ao Health Check do Render
+  if (req.url === "/") {
+    res.writeHead(200, { "Content-Type": "text/plain" });
+    res.end("Servidor de Jogo de Botão está ativo.");
+  } else {
+    res.writeHead(404);
+    res.end("Não encontrado.");
+  }
+});
 
-console.log(`🚀 Servidor rodando na porta ${PORT}`);
+// --- 2. Anexa o Servidor WebSocket ao Servidor HTTP ---
+// O 'ws' usará o objeto 'server' para lidar com a requisição de Upgrade.
+const wss = new WebSocket.Server({ server });
+
+// --- 3. Inicia o Servidor HTTP para escutar na porta ---
+server.listen(PORT, () => {
+  console.log(`🚀 Servidor HTTP/WS rodando na porta ${PORT}`);
+});
 
 const WIDTH = 800;
 const HEIGHT = 500;
