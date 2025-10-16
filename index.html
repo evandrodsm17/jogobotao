@@ -552,13 +552,22 @@
           ctx.fillRect(p.x - playerRadius, p.y - 1, playerRadius * 2, 2); // Ajuste o '1' e '2' para espessura da linha // 4. Desenha o número "10"
 
           if (p.number) {
-            // Usa amarelo para o Time 1 e branco para o Time 2 para melhor contraste
+            // Configurações de texto
+            ctx.font = "bold 14px Arial";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+
+            const text = p.number.toString(); // 4a. Desenha o Contorno (Borda)
+
+            ctx.strokeStyle = "black"; // Cor da borda
+            ctx.lineWidth = 3; // Espessura da borda. Ajuste este valor (1, 2, 3...)
+            ctx.strokeText(text, p.x, p.y); // Desenha a borda // 4b. Desenha o Preenchimento do Número
+
             ctx.fillStyle = p.team === 1 ? "yellow" : "white";
-            ctx.font = "bold 14px Arial"; // Tamanho e estilo da fonte
-            ctx.textAlign = "center"; // Centraliza o texto horizontalmente
-            ctx.textBaseline = "middle"; // Centraliza o texto verticalmente // Usa o número enviado pelo servidor (convertido para string)
-            ctx.fillText(p.number.toString(), p.x, p.y);
-          } // 5. Desenha o nome do jogador
+            ctx.fillText(text, p.x, p.y); // Desenha o preenchimento por cima da borda
+          }
+
+          // 5. Desenha o nome do jogador
           ctx.fillStyle = "white";
           ctx.font = "14px Arial";
           ctx.textAlign = "center";
@@ -603,8 +612,8 @@
         // Separa os jogadores por time
         for (let id in players) {
           const p = players[id];
-          
-          const playerNumber = p.number ? `(${p.number}) ` : '';
+
+          const playerNumber = p.number ? `(${p.number}) ` : "";
           // Adiciona um indicador 'VOCÊ' se for o jogador local
           const nameDisplay = p.name + (id === playerId ? " (VOCÊ)" : "");
 
