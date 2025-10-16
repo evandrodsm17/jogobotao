@@ -43,6 +43,7 @@ server.listen(PORT, () => {
 const WIDTH = 800;
 const HEIGHT = 500;
 const DIAGONAL_FACTOR = 0.7071; // Fator para manter a velocidade constante na diagonal (1 / sqrt(2))
+const MIDFIELD_X = WIDTH / 2; // 400
 
 // CONSTANTES DE GOL AJUSTADAS
 const GOAL_HEIGHT = 100; // Gol de 100px de altura
@@ -296,31 +297,46 @@ wss.on("connection", (ws) => {
 
         let dx = 0;
         let dy = 0;
-        let finalSpeed = speed;
+        let finalSpeed = speed; // Lógica para calcular a direção X e Y combinada
 
-        // NOVO: Lógica para calcular a direção X e Y combinada
         const input = msg.input;
 
         if (input.includes("up")) dy -= 1;
         if (input.includes("down")) dy += 1;
         if (input.includes("Left")) dx -= 1;
-        if (input.includes("Right")) dx += 1;
+        if (input.includes("Right")) dx += 1; // Se for movimento diagonal, reduz a velocidade
 
-        // Verifica se é movimento diagonal
         if (dx !== 0 && dy !== 0) {
           finalSpeed = speed * DIAGONAL_FACTOR;
-        }
+        } // 1. Calcula a Posição Desejada
 
-        p.x += dx * finalSpeed;
-        p.y += dy * finalSpeed;
+        let tempX = p.x + dx * finalSpeed;
+        let tempY = p.y + dy * finalSpeed; // ------------------------------------------------------------- // REGRAS DE RESTRIÇÃO DE POSIÇÃO // ------------------------------------------------------------- // 2. Restrição de Meio de Campo (Regra da Saída de Bola)
 
-        // Lógica de chute
+        if (isKickOffActive) {
+          if (p.team === 1) {
+            // Time 1 (Esquerda)
+            // Não pode ir além do centro.
+            // O jogador tem que parar no meio (MIDFIELD_X) MENOS o raio.
+            tempX = Math.min(tempX, MIDFIELD_X - playerRadius);
+          } else if (p.team === 2) {
+            // Time 2 (Direita)
+            // Não pode ir aquém do centro.
+            // O jogador tem que parar no meio (MIDFIELD_X) MAIS o raio.
+            tempX = Math.max(tempX, MIDFIELD_X + playerRadius);
+          }
+        } // 3. Restrição de Borda do Campo (Garante que o jogador não saia da tela) // Aplica o clamping na posição X (com as restrições de meio de campo já aplicadas em tempX)
+
+        p.x = Math.max(playerRadius, Math.min(tempX, WIDTH - playerRadius)); // Aplica o clamping na posição Y
+        p.y = Math.max(playerRadius, Math.min(tempY, HEIGHT - playerRadius)); // Lógica de chute
+
         if (input === "kick") {
+          // ... O código de chute abaixo deve permanecer exatamente como está
+          // ... (ele usa p.x e p.y que agora estão atualizados e restritos)
           const dx_kick = bola.x - p.x;
           const dy_kick = bola.y - p.y;
-          const dist = Math.sqrt(dx_kick * dx_kick + dy_kick * dy_kick);
+          const dist = Math.sqrt(dx_kick * dx_kick + dy_kick * dy_kick); // Checagem de distância e permissão para chutar
 
-          // Checagem de distância e permissão para chutar
           if (dist < 50) {
             if (isKickOffActive) {
               // Se o Kick-Off estiver ativo, checa se é o time certo
@@ -332,25 +348,17 @@ wss.on("connection", (ws) => {
               } else {
                 return; // Bloqueia o chute do time errado
               }
-            }
+            } // Aplica o impulso (seja ele um Kick-Off recém-iniciado ou um chute normal)
 
-            // Aplica o impulso (seja ele um Kick-Off recém-iniciado ou um chute normal)
             const angle = Math.atan2(dy_kick, dx_kick);
-            const force = 36;
+            const force = 24; // Força do chute
             bola.vx = Math.cos(angle) * force;
-            bola.vy = Math.sin(angle) * force;
+            bola.vy = Math.sin(angle) * force; // Atualiza o último toque
 
-            // Atualiza o último toque
             bola.lastTouchId = p.id;
             bola.lastTouchName = p.name;
           }
-        }
-
-        // REMOVA TODO O switch (msg.input) antigo que lidava com 'up', 'down', etc.
-        // E substitua pelo novo código de cálculo de dx/dy e chute acima.
-
-        p.x = Math.max(playerRadius, Math.min(p.x, WIDTH - playerRadius));
-        p.y = Math.max(playerRadius, Math.min(p.y, HEIGHT - playerRadius)); // envia posição final para todos
+        } // envia posição final para todos
 
         broadcast({ type: "playerUpdate", player: p });
         break;
@@ -359,14 +367,14 @@ wss.on("connection", (ws) => {
 
   ws.on("close", () => {
     const player = players[playerId]; // Precisamos obter o objeto player antes de deletá-lo
-    
+
     console.log(`🔴 Jogador saiu: ${playerId}`);
 
     if (player) {
-        const teamIdString = `team${player.team}`;
-        releasePlayerNumber(teamIdString, player.number); // <--- LIBERA O NÚMERO
+      const teamIdString = `team${player.team}`;
+      releasePlayerNumber(teamIdString, player.number); // <--- LIBERA O NÚMERO
     }
-    
+
     delete players[playerId];
     broadcast({ type: "playerLeft", playerId });
   });
