@@ -532,42 +532,52 @@
         for (let id in players) {
           const p = players[id];
           const playerRadius = 15; // Raio do jogador
-          const borderWidth = 3; // Largura da borda // Cor do time 1 (Vermelho) e time 2 (Azul)
+          const borderWidth = 3; // Largura da borda // Cor do time 1 (Vermelho) e time 2 (Azul) // Cores base para o preenchimento do botão
 
-          const teamColor = p.team === 1 ? "#c11717" : "#2e30eb"; // Cor da borda e linha para o time 1 (Preto) e time 2 (Vermelho)
-          const borderColor = p.team === 1 ? "black" : "#c11717"; // Borda preta para time 1, vermelha para time 2
-          const lineColor = p.team === 1 ? "black" : "#c11717"; // Linha preta para time 1, vermelha para time 2 // 1. Desenha a borda (círculo maior)
+          const teamPrimaryColor = p.team === 1 ? "#c11717" : "#2e30eb"; // Vermelho para Vitória, Azul para Bahia // Cor da borda externa do jogador // Para o Time 1, mantém preta. Para o Time 2, será branca.
 
-          ctx.fillStyle = borderColor;
+          const playerBorderColor = p.team === 1 ? "black" : "white"; // Cor da linha horizontal (agora não usaremos mais a "linha" como uma borda interna) // Removemos esta variável se não for mais usada para a faixa central, // mas a deixarei aqui caso queira usá-la em algum outro detalhe. // const playerLineColor = p.team === 1 ? "black" : "#c11717"; // 1. Desenha a borda externa do jogador (círculo maior)
+
+          ctx.fillStyle = playerBorderColor;
           ctx.beginPath();
           ctx.arc(p.x, p.y, playerRadius + borderWidth, 0, Math.PI * 2);
-          ctx.fill(); // 2. Desenha o jogador (círculo principal)
+          ctx.fill(); // 2. Desenha o jogador (círculo principal - cor primária do time)
 
-          ctx.fillStyle = teamColor;
+          ctx.fillStyle = teamPrimaryColor; // Cor primária (vermelho ou azul)
           ctx.beginPath();
           ctx.arc(p.x, p.y, playerRadius, 0, Math.PI * 2);
-          ctx.fill(); // 3. Desenha a linha horizontal
+          ctx.fill(); // 3. Desenha a linha horizontal para o Time 1 OU a faixa para o Time 2
 
-          ctx.fillStyle = lineColor;
-          ctx.fillRect(p.x - playerRadius, p.y - 1, playerRadius * 2, 2); // Ajuste o '1' e '2' para espessura da linha // 4. Desenha o número "10"
+          if (p.team === 1) {
+            // Time 1: Linha preta simples
+            ctx.fillStyle = "black";
+            ctx.fillRect(p.x - playerRadius, p.y - 1, playerRadius * 2, 2);
+          } else {
+            // Time 2: Faixa Vermelha Central (como na imagem)
+            const bandWidth = playerRadius * 0.7; // Largura da faixa (ajuste conforme necessário)
+            ctx.fillStyle = "#c11717"; // Cor vermelha para a faixa do Bahia
+            ctx.fillRect(
+              p.x - bandWidth / 2,
+              p.y - playerRadius,
+              bandWidth,
+              playerRadius * 2
+            );
+          } // 4. Desenha o número com contorno (já alterado na instrução anterior)
 
           if (p.number) {
-            // Configurações de texto
             ctx.font = "bold 14px Arial";
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
 
-            const text = p.number.toString(); // 4a. Desenha o Contorno (Borda)
+            const text = p.number.toString();
 
-            ctx.strokeStyle = "black"; // Cor da borda
-            ctx.lineWidth = 3; // Espessura da borda. Ajuste este valor (1, 2, 3...)
-            ctx.strokeText(text, p.x, p.y); // Desenha a borda // 4b. Desenha o Preenchimento do Número
+            ctx.strokeStyle = "black";
+            ctx.lineWidth = 3;
+            ctx.strokeText(text, p.x, p.y);
 
-            ctx.fillStyle = p.team === 1 ? "yellow" : "white";
-            ctx.fillText(text, p.x, p.y); // Desenha o preenchimento por cima da borda
-          }
-
-          // 5. Desenha o nome do jogador
+            ctx.fillStyle = p.team === 1 ? "yellow" : "white"; // Amarelo para Time 1, Branco para Time 2
+            ctx.fillText(text, p.x, p.y);
+          } // 5. Desenha o nome do jogador (sem alterações)
           ctx.fillStyle = "white";
           ctx.font = "14px Arial";
           ctx.textAlign = "center";
@@ -584,7 +594,6 @@
         timeEl.textContent = `${min}:${sec}`;
       }
 
-      // index.html: Adicione a função para determinar a direção
 
       function getCombinedDirection() {
         let direction = "";
