@@ -20,10 +20,104 @@
   </head>
   <body>
     <h2>🏆 Jogo de Botão LAN</h2>
-    <p id="status">Conectando ao servidor...</p>
-    <p id="score">0 x 0</p>
-    <p id="time">03:00</p>
-    <canvas id="game" width="800" height="500"></canvas>
+
+    <div
+      style="
+        display: flex;
+        justify-content: space-around;
+        width: 800px;
+        margin: 0 auto;
+      "
+    >
+      <div
+        id="team1Panel"
+        style="
+          width: 180px;
+          text-align: left;
+          background: #3c3d3e;
+          padding: 10px;
+          border-radius: 5px;
+        "
+      >
+        <h3 style="color: #c11717">EC VITÓRIA</h3>
+        <ul id="team1List" style="list-style: none; padding: 0">
+          <li>Nenhum jogador...</li>
+        </ul>
+      </div>
+
+      <div style="width: 200px; text-align: center">
+        <p id="time" style="font-size: 1.5em; font-weight: bold">03:00</p>
+        <p id="score" style="font-size: 3em; font-weight: bold; margin: 0">
+          0 x 0
+        </p>
+        <p id="status" style="margin-top: 5px">Conectando...</p>
+      </div>
+
+      <div
+        id="team2Panel"
+        style="
+          width: 180px;
+          text-align: right;
+          background: #3c3d3e;
+          padding: 10px;
+          border-radius: 5px;
+        "
+      >
+        <h3 style="color: #2e30eb">EC BAHIA</h3>
+        <ul id="team2List" style="list-style: none; padding: 0">
+          <li>Nenhum jogador...</li>
+        </ul>
+      </div>
+    </div>
+
+    <div
+      id="eventMessage"
+      style="
+        position: absolute;
+        top: 150px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: yellow;
+        font-size: 2.5em;
+        font-weight: bold;
+        text-shadow: 2px 2px 5px black;
+        z-index: 10;
+        display: none;
+      "
+    ></div>
+
+    <div
+      id="gameOverScreen"
+      style="
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.8);
+        color: white;
+        display: none;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        z-index: 20;
+      "
+    >
+      <h1 id="winnerMessage" style="font-size: 4em"></h1>
+      <button
+        id="restartButton"
+        style="
+          padding: 15px 30px;
+          font-size: 1.5em;
+          margin-top: 30px;
+          cursor: pointer;
+        "
+      >
+        Iniciar Nova Partida
+      </button>
+    </div>
+
+        <canvas id="game" width="800" height="500"></canvas>
 
     <script>
       const ws = new WebSocket("ws://10.60.0.99:8080"); // IP do host
@@ -31,7 +125,13 @@
       const ctx = canvas.getContext("2d");
       const status = document.getElementById("status");
       const scoreEl = document.getElementById("score");
+      const eventMessageEl = document.getElementById("eventMessage");
+      const gameOverScreenEl = document.getElementById("gameOverScreen");
+      const winnerMessageEl = document.getElementById("winnerMessage");
+      const restartButton = document.getElementById("restartButton");
       const timeEl = document.getElementById("time");
+      const team1List = document.getElementById("team1List");
+      const team2List = document.getElementById("team2List");
 
       const WIDTH = canvas.width; // 600
       const HEIGHT = canvas.height; // 400
@@ -43,6 +143,8 @@
       let inputInterval = null; // Para o loop de envio de input
       let score = { 1: 0, 2: 0 };
       let gameTime = 180;
+      let isKickOffActive = false;
+      let kickOffTeam = null;
 
       // let teamCount = { 1: 0, 2: 0 };
       // const team1Positions = [
@@ -242,6 +344,71 @@
         return direction || null;
       }
 
+      // Adicione esta nova função ao seu script
+      function updatePlayerLists() {
+        // Limpa as listas atuais
+        team1List.innerHTML = "";
+        team2List.innerHTML = "";
+
+        let team1Players = [];
+        let team2Players = [];
+
+        // Separa os jogadores por time
+        for (let id in players) {
+          const p = players[id];
+          // Adiciona um indicador 'VOCÊ' se for o jogador local
+          const nameDisplay = p.name + (id === playerId ? " (VOCÊ)" : "");
+
+          if (p.team === 1) {
+            team1Players.push(nameDisplay);
+          } else if (p.team === 2) {
+            team2Players.push(nameDisplay);
+          }
+        }
+
+        // Preenche a lista do Time 1
+        if (team1Players.length === 0) {
+          team1List.innerHTML = "<li>(Vazio)</li>";
+        } else {
+          team1Players.forEach((name) => {
+            const li = document.createElement("li");
+            li.textContent = name;
+            // Adiciona uma cor para o 'VOCÊ'
+            if (name.includes("(VOCÊ)")) li.style.color = "lightgreen";
+            team1List.appendChild(li);
+          });
+        }
+
+        // Preenche a lista do Time 2
+        if (team2Players.length === 0) {
+          team2List.innerHTML = "<li>(Vazio)</li>";
+        } else {
+          team2Players.forEach((name) => {
+            const li = document.createElement("li");
+            li.textContent = name;
+            // Adiciona uma cor para o 'VOCÊ'
+            if (name.includes("(VOCÊ)")) li.style.color = "lightgreen";
+            team2List.appendChild(li);
+          });
+        }
+      }
+
+      function displayEventMessage(message, duration = 3000) {
+        eventMessageEl.textContent = message;
+        eventMessageEl.style.display = "block";
+
+        // Oculta a mensagem após o tempo determinado
+        setTimeout(() => {
+          eventMessageEl.style.display = "none";
+        }, duration);
+      }
+
+      restartButton.onclick = () => {
+        gameOverScreenEl.style.display = "none";
+        // Envia a mensagem para o servidor iniciar a nova partida
+        ws.send(JSON.stringify({ type: "restartGame" }));
+      };
+
       // index.html: Adicione este loop de envio de input (ex: 30ms = 33 vezes por segundo)
       inputInterval = setInterval(() => {
         if (!playerId) return;
@@ -254,7 +421,6 @@
         }
       }, 30); // Frequência do envio de input
 
-      
       ws.onopen = () => {
         console.log("✅ Conectado ao servidor");
         status.textContent = "Conectado!";
@@ -284,14 +450,17 @@
             bola = msg.bola || bola;
             score = msg.score || score;
             gameTime = msg.gameTime || gameTime;
+            updatePlayerLists(); // Atualiza as listas de jogadores
             break;
 
           case "newPlayer":
             players[msg.player.id] = msg.player;
+            updatePlayerLists(); // Atualiza as listas de jogadores
             break;
 
           case "playerLeft":
             delete players[msg.playerId];
+            updatePlayerLists(); // Atualiza as listas de jogadores
             break;
 
           case "playerUpdate":
@@ -306,12 +475,76 @@
 
           case "scoreUpdate":
             score = msg.score;
+
+            isKickOffActive = msg.kickOff;
+            kickOffTeam = msg.kickOffTeam;
+
+            if (isKickOffActive) {
+              const teamName = kickOffTeam === 1 ? "VERMELHO" : "AZUL";
+              const kickOffMsg = `Saída de Bola para o Time ${kickOffTeam} (${teamName})!`;
+              // Exibe por um longo tempo, até ser removida por 'kickOffStarted'
+              displayEventMessage(kickOffMsg, 100000);
+            }
+            // NOVO: Mensagem de GOL com o nome do marcador
+            const teamName = msg.team === 1 ? "VITÓRIA" : "BAHIA";
+            const scorerMsg =
+              msg.scorer === "o time"
+                ? `GOL do Time ${msg.team} (${teamName})!`
+                : `GOL do Time ${msg.team}! Marcado por ${msg.scorer}!`;
+            displayEventMessage(scorerMsg, 4000); // Exibe por 4 segundos
+
+            scoreEl.textContent = `${score[1]} x ${score[2]}`;
             break;
 
-          case "gameOver":
-            alert(
-              `Fim de jogo! Placar final ${msg.score[1]} x ${msg.score[2]}`
-            );
+          case "gameOver": // Determina o vencedor
+            let winnerName = "";
+            if (msg.score[1] > msg.score[2]) {
+              winnerName = "Time 1 (VITORIA) VENCEU!";
+            } else if (msg.score[2] > msg.score[1]) {
+              winnerName = "Time 2 (BAHIA) VENCEU!";
+            } else {
+              winnerName = "EMPATE!";
+            }
+
+            // Exibe a tela de Game Over
+            winnerMessageEl.textContent = winnerName;
+            gameOverScreenEl.style.display = "flex";
+
+            // Para o loop de input do jogador (IMPORTANTE: Evita movimento após o fim)
+            if (inputInterval) clearInterval(inputInterval);
+            break;
+
+          case "gameRestarted":
+            // Esconde tela de Game Over (se ainda estiver visível)
+            gameOverScreenEl.style.display = "none";
+
+            // Reseta a UI do placar e tempo
+            score = msg.score; // 0x0
+            gameTime = 180;
+            scoreEl.textContent = `${score[1]} x ${score[2]}`;
+            timeEl.textContent = "03:00";
+
+            // Reinicia o loop de input para permitir que o jogador se mova novamente
+            if (!inputInterval) {
+              // Assumindo que você usa uma função 'sendInput' para o loop de 30ms
+              // Se você usou o código sugerido, substitua 'sendInput' pela sua lógica de setInterval de 30ms.
+              // Exemplo (se você seguiu o passo a passo anterior):
+              inputInterval = setInterval(() => {
+                if (!playerId) return;
+                const input = getCombinedDirection();
+                if (input) {
+                  ws.send(JSON.stringify({ type: "input", playerId, input }));
+                }
+              }, 30);
+            }
+            break;
+
+            case "kickOffStarted":
+            isKickOffActive = false;
+            kickOffTeam = null;
+            // Limpa a mensagem de evento de saída de bola e mostra 'JOGO ROLANDO!'
+            eventMessageEl.style.display = 'none'; 
+            displayEventMessage("JOGO ROLANDO!", 1500);
             break;
         }
         desenhar();

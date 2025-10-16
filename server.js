@@ -16,7 +16,15 @@ const GOAL_BOTTOM = GOAL_TOP + GOAL_HEIGHT; // 200 + 100 = 300
 const PLAYER_RADIUS = 15; // Raio do jogador consistente
 
 let players = {};
-let bola = { x: WIDTH / 2, y: HEIGHT / 2, vx: 0, vy: 0, raio: 10 };
+let bola = {
+  x: WIDTH / 2,
+  y: HEIGHT / 2,
+  vx: 0,
+  vy: 0,
+  raio: 10,
+  lastTouchId: null,
+  lastTouchName: null,
+};
 
 const team1Positions = [
   { x: 120, y: 120 },
@@ -33,16 +41,28 @@ const team2Positions = [
 let teamCount = { 1: 0, 2: 0 };
 const score = { 1: 0, 2: 0 };
 let gameTime = 180; // 3 minutos em segundos
+let isKickOffActive = false; // NOVO: Controla se o jogo está pausado para o Kick-Off
+let kickOffTeam = null; // NOVO: O time que fará a saída de bola (o time que sofreu o gol)
 let gameInterval = null;
 
 // Atualiza física da bola a cada frame
 setInterval(() => {
-  // Atualiza posição
-  bola.x += bola.vx;
-  bola.y += bola.vy; // Atrito da bola
+  if (!isKickOffActive) {
+    // A BOLA SÓ SE MOVE SE O KICK-OFF NÃO ESTIVER ATIVO
+    bola.x += bola.vx;
+    bola.y += bola.vy;
 
-  bola.vx *= 0.98;
-  bola.vy *= 0.98; // ------------------------------------------------------------------ // CORREÇÃO 1: NOVA LÓGICA DE REBOTE E COLISÃO DE PAREDES // ------------------------------------------------------------------ // Colisão com a parede esquerda (FORA da área do gol)
+    // Atrito da bola
+    bola.vx *= 0.98;
+    bola.vy *= 0.98;
+  } else {
+    // Se o Kick-off estiver ativo, a bola fica parada e no centro
+    bola.x = WIDTH / 2;
+    bola.y = HEIGHT / 2;
+    bola.vx = 0;
+    bola.vy = 0;
+  }
+  // Colisão com a parede esquerda (FORA da área do gol)
 
   if (bola.x - bola.raio < 0 && (bola.y < GOAL_TOP || bola.y > GOAL_BOTTOM)) {
     bola.vx *= -1;
@@ -80,15 +100,39 @@ setInterval(() => {
       p.x -= Math.cos(angle) * overlap;
       p.y -= Math.sin(angle) * overlap; // É essencial sincronizar a posição corrigida do jogador
 
+      bola.lastTouchId = id;
+      bola.lastTouchName = p.name;
       broadcast({ type: "playerUpdate", player: p });
     }
-  } // ------------------------------------------------------------------ // Lógica de GOL (Agora usando GOAL_TOP/BOTTOM e checagem de centro) // ------------------------------------------------------------------ // Gol Time 2 (Esquerda)
+  } // ------------------------------------------------------------------ // Lógica de GOL (Agora usando GOAL_TOP/BOTTOM e checagem de centro) // ------------------------------------------------------------------ // Gol Time 2 (Esquerda) // Gol Time 2 (Esquerda)
+
+  // server.js: Modifique a Lógica de GOL (dentro do loop setInterval)
 
   if (bola.x - bola.raio <= 0 && bola.y >= GOAL_TOP && bola.y <= GOAL_BOTTOM) {
-    // Para ser gol, o centro da bola deve ter cruzado o limite
     if (bola.x < 0) {
       score[2]++;
-      broadcast({ type: "scoreUpdate", score });
+      const scorerName = bola.lastTouchName || "o time";
+
+      // NOVO: Checa a regra de 5 gols (Fim de Jogo)
+      if (score[2] >= 5) {
+        broadcast({ type: "gameOver", score });
+        if (gameInterval) clearInterval(gameInterval);
+        return;
+      }
+
+      // NOVO: Inicia o Kick-off (Time 1 sofreu, Time 1 faz a saída)
+      isKickOffActive = true;
+      kickOffTeam = 1;
+      resetAllPlayers();
+
+      broadcast({
+        type: "scoreUpdate",
+        score,
+        scorer: scorerName,
+        team: 2,
+        kickOff: true,
+        kickOffTeam: 1,
+      });
       resetBola();
       return;
     }
@@ -98,10 +142,30 @@ setInterval(() => {
     bola.y >= GOAL_TOP &&
     bola.y <= GOAL_BOTTOM
   ) {
-    // Para ser gol, o centro da bola deve ter cruzado o limite
     if (bola.x > WIDTH) {
       score[1]++;
-      broadcast({ type: "scoreUpdate", score });
+      const scorerName = bola.lastTouchName || "o time";
+
+      // NOVO: Checa a regra de 5 gols (Fim de Jogo)
+      if (score[1] >= 5) {
+        broadcast({ type: "gameOver", score });
+        if (gameInterval) clearInterval(gameInterval);
+        return;
+      }
+
+      // NOVO: Inicia o Kick-off (Time 2 sofreu, Time 2 faz a saída)
+      isKickOffActive = true;
+      kickOffTeam = 2;
+      resetAllPlayers();
+
+      broadcast({
+        type: "scoreUpdate",
+        score,
+        scorer: scorerName,
+        team: 1,
+        kickOff: true,
+        kickOffTeam: 2,
+      });
       resetBola();
       return;
     }
@@ -138,6 +202,10 @@ wss.on("connection", (ws) => {
     }
 
     switch (msg.type) {
+      case "restartGame":
+        restartGame();
+        break;
+
       case "newPlayer":
         const incomingTeam = msg.player.team; // Pega o time escolhido pelo cliente // ATRIBUIÇÃO DE POSIÇÃO NO SERVIDOR
 
@@ -202,21 +270,35 @@ wss.on("connection", (ws) => {
 
         // Lógica de chute
         if (input === "kick") {
-          // Agora o chute é uma direção enviada pelo loop
-          // ... (A sua lógica de chute original deve vir aqui)
-          {
-            // direção da bola relativa ao jogador
-            const dx_kick = bola.x - p.x;
-            const dy_kick = bola.y - p.y;
-            const dist = Math.sqrt(dx_kick * dx_kick + dy_kick * dy_kick);
-            if (dist < 50) {
-              const angle = Math.atan2(dy_kick, dx_kick);
-              const force = 36;
-              bola.vx = Math.cos(angle) * force;
-              bola.vy = Math.sin(angle) * force;
+          const dx_kick = bola.x - p.x;
+          const dy_kick = bola.y - p.y;
+          const dist = Math.sqrt(dx_kick * dx_kick + dy_kick * dy_kick);
+
+          // Checagem de distância e permissão para chutar
+          if (dist < 50) {
+            if (isKickOffActive) {
+              // Se o Kick-Off estiver ativo, checa se é o time certo
+              if (p.team === kickOffTeam) {
+                // Time correto iniciando o Kick-Off. O jogo é reativado.
+                isKickOffActive = false;
+                kickOffTeam = null;
+                broadcast({ type: "kickOffStarted" }); // Notifica clientes
+              } else {
+                return; // Bloqueia o chute do time errado
+              }
             }
+
+            // Aplica o impulso (seja ele um Kick-Off recém-iniciado ou um chute normal)
+            const angle = Math.atan2(dy_kick, dx_kick);
+            const force = 36;
+            bola.vx = Math.cos(angle) * force;
+            bola.vy = Math.sin(angle) * force;
+
+            // Atualiza o último toque
+            bola.lastTouchId = p.id;
+            bola.lastTouchName = p.name;
           }
-        } // ADICIONE ESTA LÓGICA DE CLAMPING PARA O JOGADOR
+        }
 
         // REMOVA TODO O switch (msg.input) antigo que lidava com 'up', 'down', etc.
         // E substitua pelo novo código de cálculo de dx/dy e chute acima.
@@ -248,6 +330,59 @@ function resetBola() {
   bola.x = WIDTH / 2;
   bola.y = HEIGHT / 2;
   bola.vx = 0;
-  bola.vy = 0; // broadcast do reset da bola para o cliente
+  bola.vy = 0;
+  bola.lastTouchId = null; // NOVO: Limpa o marcador
+  bola.lastTouchName = null; // NOVO: Limpa o marcador // broadcast do reset da bola para o cliente
   broadcast({ type: "update", bola });
+}
+
+// server.js: Adicione esta nova função no final do arquivo (após resetBola())
+
+function restartGame() {
+    // 1. Resetar placar e tempo
+    score[1] = 0;
+    score[2] = 0;
+    gameTime = 180; // 3 minutos
+    isKickOffActive = false; // NOVO: Limpa o estado de Kick-off
+    kickOffTeam = null;      // NOVO: Limpa o time da saída de bola
+
+    // 2. Limpar e recriar o loop de tempo
+    if (gameInterval) clearInterval(gameInterval);
+    gameInterval = setInterval(() => {
+        if (gameTime > 0) {
+            gameTime--;
+            broadcast({ type: "update", gameTime }); 
+        } else {
+            // NOVO: Checagem de fim de jogo por tempo (se não for 5x0)
+            clearInterval(gameInterval);
+            broadcast({ type: "gameOver", score });
+        }
+    }, 1000);
+
+    // 3. Resetar a posição dos jogadores
+    resetAllPlayers(); // NOVO: Usando a nova função
+    
+    // 4. Resetar bola e notificar todos os clientes
+    resetBola();
+    broadcast({ type: "gameRestarted", score }); 
+}
+
+function resetAllPlayers() {
+  let team1Index = 0;
+  let team2Index = 0;
+  for (let id in players) {
+    const p = players[id];
+    let initialPos;
+    if (p.team === 1) {
+      // Usa o array de posições do time 1
+      initialPos = team1Positions[team1Index++ % team1Positions.length];
+    } else {
+      // Usa o array de posições do time 2
+      initialPos = team2Positions[team2Index++ % team2Positions.length];
+    }
+    p.x = initialPos.x;
+    p.y = initialPos.y;
+    // Broadcast para que os clientes atualizem a posição do jogador
+    broadcast({ type: "playerUpdate", player: p });
+  }
 }
