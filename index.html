@@ -16,6 +16,147 @@
         margin: 20px auto;
         border: 2px solid white;
       }
+
+      .painel-placar {
+        /* Novo nome de classe/ID para o bloco central */
+        width: 200px;
+        text-align: center;
+      }
+
+      #time {
+        font-size: 1.8em; /* Aumenta um pouco */
+        font-weight: 700;
+        color: #4caf50; /* Cor verde para o tempo (como um placar eletrônico) */
+        text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5); /* Sombra para destaque */
+        margin: 10px 0;
+      }
+
+      #score {
+        font-size: 4em; /* Aumenta o placar */
+        font-weight: 900; /* Mais negrito */
+        margin: 0;
+        letter-spacing: 5px; /* Espaçamento entre os números (ex: 1 X 0) */
+      }
+
+      /* NOVO ESTILO: Separador 'X' */
+      #score span {
+        font-size: 0.5em;
+        font-weight: normal;
+        color: #ccc;
+        margin: 0 10px;
+      }
+
+      #status {
+        margin-top: 5px;
+        color: #ffc107; /* Amarelo para status de conexão */
+      }
+
+      /* Estilo para o painel de time base */
+      .teamPanel {
+        width: 180px;
+        background: #3c3d3e;
+        padding: 10px;
+        border-radius: 8px; /* Borda mais suave */
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* Sombra suave */
+      }
+
+      /* Estilo para o cabeçalho do time */
+      .teamPanel h3 {
+        margin-top: 0;
+        margin-bottom: 5px;
+        padding-bottom: 5px;
+        border-bottom: 2px solid; /* Linha de separação */
+        font-size: 1.2em;
+      }
+
+      /* Cores específicas e bordas para o VITÓRIA */
+      #team1Panel {
+        border-left: 5px solid #c11717; /* Borda lateral vermelha */
+        text-align: left;
+      }
+      #team1Panel h3 {
+        color: #c11717;
+        border-color: #c11717;
+      }
+
+      /* Cores específicas e bordas para o BAHIA */
+      #team2Panel {
+        border-right: 5px solid #2e30eb; /* Borda lateral azul */
+        text-align: right;
+      }
+      #team2Panel h3 {
+        color: #2e30eb;
+        border-color: #2e30eb;
+      }
+
+      /* Lista de jogadores */
+      .teamPanel ul {
+        list-style: none;
+        padding: 0;
+        font-size: 0.9em;
+        color: #ccc;
+      }
+      .teamPanel li {
+        padding: 2px 0;
+      }
+
+      #touchControls {
+        /* Esconde os controles por padrão em telas grandes (PC) */
+        display: none;
+      }
+
+      /* Regra para EXIBIR os controles SÓ EM TELAS PEQUENAS (Celulares) */
+      @media (max-width: 850px) {
+        #touchControls {
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          width: 100%;
+          display: flex; /* Ativa a exibição em telas pequenas */
+          justify-content: space-between;
+          align-items: flex-end;
+          padding: 15px;
+          box-sizing: border-box;
+          pointer-events: none; /* Permite interagir com o campo por baixo, exceto nos botões */
+        }
+
+        /* Estilo dos Botões */
+        .dpad-btn,
+        .action-btn {
+          pointer-events: auto; /* Reativa a interação nos botões */
+          background: rgba(0, 0, 0, 0.7);
+          color: white;
+          border: 2px solid white;
+          border-radius: 10px;
+          font-size: 1.2em;
+          cursor: pointer;
+          margin: 5px;
+          user-select: none; /* Impede seleção de texto */
+          -webkit-user-select: none;
+          touch-action: manipulation; /* Melhora a resposta ao toque */
+        }
+
+        /* Direcional Pad (DPad) */
+        #dpad {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+        }
+
+        .dpad-btn {
+          width: 50px;
+          height: 50px;
+          font-size: 20px;
+        }
+
+        /* Botão de Chute */
+        #kick-btn {
+          width: 120px;
+          height: 60px;
+          margin-bottom: 25px; /* Afasta da borda inferior */
+          font-weight: bold;
+        }
+      }
     </style>
   </head>
   <body>
@@ -30,41 +171,25 @@
       "
     >
       <div
-        id="team1Panel"
-        style="
-          width: 180px;
-          text-align: left;
-          background: #3c3d3e;
-          padding: 10px;
-          border-radius: 5px;
-        "
-      >
-        <h3 style="color: #c11717">EC VITÓRIA</h3>
-        <ul id="team1List" style="list-style: none; padding: 0">
+        id="team1Panel" class="teamPanel">
+        <h3>EC VITÓRIA</h3>
+        <ul id="team1List">
           <li>Nenhum jogador...</li>
         </ul>
       </div>
 
-      <div style="width: 200px; text-align: center">
-        <p id="time" style="font-size: 1.5em; font-weight: bold">03:00</p>
-        <p id="score" style="font-size: 3em; font-weight: bold; margin: 0">
-          0 x 0
+      <div class="painel-placar">
+        <p id="time">03:00</p>
+        <p id="score">
+          0 <span class="score-separator">x</span> 0
         </p>
-        <p id="status" style="margin-top: 5px">Conectando...</p>
+        <p id="status">Conectando...</p>
       </div>
 
       <div
-        id="team2Panel"
-        style="
-          width: 180px;
-          text-align: right;
-          background: #3c3d3e;
-          padding: 10px;
-          border-radius: 5px;
-        "
-      >
-        <h3 style="color: #2e30eb">EC BAHIA</h3>
-        <ul id="team2List" style="list-style: none; padding: 0">
+        id="team2Panel" class="teamPanel">
+        <h3>EC BAHIA</h3>
+        <ul id="team2List">
           <li>Nenhum jogador...</li>
         </ul>
       </div>
@@ -115,6 +240,19 @@
       >
         Iniciar Nova Partida
       </button>
+    </div>
+
+    <div id="touchControls">
+      <div id="dpad">
+        <button id="up" class="dpad-btn">&#x25B2;</button>
+        <div style="display: flex">
+          <button id="left" class="dpad-btn">&#x25C0;</button>
+          <button id="right" class="dpad-btn">&#x25B6;</button>
+        </div>
+        <button id="down" class="dpad-btn">&#x25BC;</button>
+      </div>
+
+      <button id="kick-btn" class="action-btn">CHUTE</button>
     </div>
 
         <canvas id="game" width="800" height="500"></canvas>
@@ -512,7 +650,7 @@
             gameOverScreenEl.style.display = "flex";
 
             // Para o loop de input do jogador (IMPORTANTE: Evita movimento após o fim)
-            if (inputInterval){
+            if (inputInterval) {
               clearInterval(inputInterval);
               inputInterval = null;
             }
@@ -543,11 +681,11 @@
             }
             break;
 
-            case "kickOffStarted":
+          case "kickOffStarted":
             isKickOffActive = false;
             kickOffTeam = null;
             // Limpa a mensagem de evento de saída de bola e mostra 'JOGO ROLANDO!'
-            eventMessageEl.style.display = 'none'; 
+            eventMessageEl.style.display = "none";
             displayEventMessage("JOGO ROLANDO!", 1500);
             break;
         }
@@ -586,6 +724,59 @@
         if (e.code === "Space") keysPressed.kick = false;
       });
 
+      // index.html: ADICIONE ESTE CÓDIGO NO FINAL DO <script>
+
+      // --- LÓGICA DE CONTROLES VIRTUAIS (TOUCHSCREEN) ---
+      const touchControls = document.getElementById("touchControls");
+
+      if (touchControls) {
+        const map = {
+          up: "ArrowUp",
+          down: "ArrowDown",
+          left: "ArrowLeft",
+          right: "ArrowRight",
+          "kick-btn": "Space",
+        };
+
+        function handleTouchStart(e) {
+          e.preventDefault(); // Impede o scroll e o comportamento padrão do toque
+          const key = map[this.id];
+
+          if (key === "ArrowUp") keysPressed.up = true;
+          if (key === "ArrowDown") keysPressed.down = true;
+          if (key === "ArrowLeft") keysPressed.left = true;
+          if (key === "ArrowRight") keysPressed.right = true;
+          if (key === "Space") keysPressed.kick = true;
+
+          this.style.background = "rgba(255, 255, 255, 0.8)"; // Feedback visual
+        }
+
+        function handleTouchEnd(e) {
+          e.preventDefault();
+          const key = map[this.id];
+
+          if (key === "ArrowUp") keysPressed.up = false;
+          if (key === "ArrowDown") keysPressed.down = false;
+          if (key === "ArrowLeft") keysPressed.left = false;
+          if (key === "ArrowRight") keysPressed.right = false;
+          if (key === "Space") keysPressed.kick = false;
+
+          this.style.background = "rgba(0, 0, 0, 0.7)"; // Restaura o visual
+        }
+
+        // Aplica os eventos de toque a todos os botões
+        const buttons = document.querySelectorAll("#touchControls button");
+        buttons.forEach((button) => {
+          button.addEventListener("touchstart", handleTouchStart);
+          button.addEventListener("touchend", handleTouchEnd);
+          button.addEventListener("touchcancel", handleTouchEnd); // Caso o dedo deslize para fora
+
+          // Também adicionamos os eventos de mouse (para testar emulando o celular no PC)
+          button.addEventListener("mousedown", handleTouchStart);
+          button.addEventListener("mouseup", handleTouchEnd);
+          button.addEventListener("mouseleave", handleTouchEnd);
+        });
+      }
       // Loop de desenho
       setInterval(desenhar, 30);
     </script>
