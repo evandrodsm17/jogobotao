@@ -120,7 +120,8 @@
         <canvas id="game" width="800" height="500"></canvas>
 
     <script>
-      const ws = new WebSocket("ws://10.60.0.99:8080"); // IP do host
+      //const ws = new WebSocket("ws://10.60.0.99:8080"); // IP do host
+      const ws = new WebSocket("wss://bavi-online.onrender.com"); // Para testes locais
       const canvas = document.getElementById("game");
       const ctx = canvas.getContext("2d");
       const status = document.getElementById("status");
