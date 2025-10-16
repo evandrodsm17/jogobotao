@@ -1,5 +1,7 @@
 const WebSocket = require("ws");
-const http = require("http"); // NOVO: Módulo HTTP nativo do Node.js
+const http = require("http");
+const fs = require("fs"); // <--- MÓDULO NATIVO
+const path = require("path"); // <--- MÓDULO NATIVO
 const { v4: uuidv4 } = require("uuid");
 
 // --- Configuração da Porta ---
@@ -9,9 +11,21 @@ const PORT = process.env.PORT || 8080;
 const server = http.createServer((req, res) => {
   // ESSENCIAL: Responde ao Health Check do Render
   if (req.url === "/") {
-    res.writeHead(200, { "Content-Type": "text/plain" });
-    res.end("Servidor de Jogo de Botão está ativo.");
+    const filePath = path.join(__dirname, "index.html"); // Tenta ler o arquivo index.html
+
+    fs.readFile(filePath, (err, data) => {
+      if (err) {
+        console.error("Erro ao ler index.html:", err);
+        res.writeHead(500, { "Content-Type": "text/plain" });
+        res.end("Erro interno do servidor.");
+      } else {
+        // SUCESSO: Envia o arquivo HTML
+        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+        res.end(data);
+      }
+    });
   } else {
+    // Para qualquer outra rota (Health Check do Render, etc.)
     res.writeHead(404);
     res.end("Não encontrado.");
   }
