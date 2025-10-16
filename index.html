@@ -115,7 +115,8 @@
         font-weight: bold;
         text-shadow: 2px 2px 5px black;
         z-index: 10;
-        display: none; /* Inicia escondido */
+        display: none; 
+        /* Inicia escondido */
 
         /* NOVAS PROPRIEDADES DE ANIMAÇÃO */
         animation-duration: 4s; /* Duração da animação (deve ser igual ao `duration` do displayEventMessage) */
@@ -136,7 +137,7 @@
       #time {
         font-size: 1.8em; /* Aumenta um pouco */
         font-weight: 700;
-        color: #4caf50; /* Cor verde para o tempo (como um placar eletrônico) */
+        color: #d0d0d0; /* Cor verde para o tempo (como um placar eletrônico) */
         text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5); /* Sombra para destaque */
         margin: 10px 0;
       }
@@ -152,7 +153,7 @@
       #score span {
         font-size: 0.5em;
         font-weight: normal;
-        color: #ccc;
+        color: #c6c209;
         margin: 0 10px;
       }
 
@@ -164,7 +165,7 @@
       /* Estilo para o painel de time base */
       .teamPanel {
         width: 180px;
-        background: #3c3d3e;
+        background: #d9dcdf;
         padding: 10px;
         border-radius: 8px; /* Borda mais suave */
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* Sombra suave */
@@ -181,12 +182,12 @@
 
       /* Cores específicas e bordas para o VITÓRIA */
       #team1Panel {
-        border-left: 5px solid #c11717; /* Borda lateral vermelha */
+        border-left: 5px solid #9e0101; /* Borda lateral vermelha */
         text-align: left;
       }
       #team1Panel h3 {
-        color: #c11717;
-        border-color: #c11717;
+        color: #101010;
+        border-color: #9e0101;
       }
 
       /* Cores específicas e bordas para o BAHIA */
@@ -195,7 +196,7 @@
         text-align: right;
       }
       #team2Panel h3 {
-        color: #2e30eb;
+        color: #9e0101;
         border-color: #2e30eb;
       }
 
@@ -204,7 +205,7 @@
         list-style: none;
         padding: 0;
         font-size: 0.9em;
-        color: #ccc;
+        color: #171616;
       }
       .teamPanel li {
         padding: 2px 0;
@@ -270,7 +271,7 @@
     </style>
   </head>
   <body>
-    <h2>🏆 Jogo de Botão LAN</h2>
+    <h2>🏆 BAVI ONLINE 🏆</h2>
 
     <div
       style="
@@ -613,7 +614,7 @@
             const li = document.createElement("li");
             li.textContent = name;
             // Adiciona uma cor para o 'VOCÊ'
-            if (name.includes("(VOCÊ)")) li.style.color = "lightgreen";
+            if (name.includes("(VOCÊ)")) li.style.background = "lightgreen";
             team1List.appendChild(li);
           });
         }

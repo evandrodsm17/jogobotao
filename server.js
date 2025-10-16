@@ -142,15 +142,25 @@ setInterval(() => {
     if (dist < bola.raio + playerRadius) {
       // 15 = raio do jogador
       let angle = Math.atan2(dy, dx);
-      let force = 12;
-      bola.vx = Math.cos(angle) * force;
-      bola.vy = Math.sin(angle) * force; // Empurra jogador levemente pra fora da bola
+
       const overlap = bola.raio + playerRadius - dist;
       p.x -= Math.cos(angle) * overlap;
       p.y -= Math.sin(angle) * overlap; // É essencial sincronizar a posição corrigida do jogador
 
+      const conductionFactor = 0.2;
+
+      const playerTouchSpeed = 1.5; // Simula a velocidade do empurrão do jogador
+
+      bola.vy =
+        bola.vy * (1 - conductionFactor) +
+        Math.sin(angle) * playerTouchSpeed * conductionFactor;
+      bola.vx =
+        bola.vx * (1 - conductionFactor) +
+        Math.cos(angle) * playerTouchSpeed * conductionFactor;
+
       bola.lastTouchId = id;
       bola.lastTouchName = p.name;
+
       broadcast({ type: "playerUpdate", player: p });
     }
   } // ------------------------------------------------------------------ // Lógica de GOL (Agora usando GOAL_TOP/BOTTOM e checagem de centro) // ------------------------------------------------------------------ // Gol Time 2 (Esquerda) // Gol Time 2 (Esquerda)
@@ -364,7 +374,7 @@ wss.on("connection", (ws) => {
             } // Aplica o impulso (seja ele um Kick-Off recém-iniciado ou um chute normal)
 
             const angle = Math.atan2(dy_kick, dx_kick);
-            const force = 24; // Força do chute
+            const force = 12; // Força do chute
             bola.vx = Math.cos(angle) * force;
             bola.vy = Math.sin(angle) * force; // Atualiza o último toque
 
@@ -492,150 +502,151 @@ function releasePlayerNumber(teamId, number) {
 }
 
 function calculateIdealBotPosition(bot, ball) {
-    const playerRadius = PLAYER_RADIUS;
-    const isBotTeam1 = bot.team === 1;
+  const playerRadius = PLAYER_RADIUS;
+  const isBotTeam1 = bot.team === 1;
 
-    // Determina se a bola está no campo do BOT (DEFESA) ou no campo oposto (ATAQUE)
-    const isBallInBotSide = isBotTeam1 
-        ? ball.x <= MIDFIELD_X 
-        : ball.x >= MIDFIELD_X;
-    
-    let idealX;
-    let idealY;
-    let xLimit;
+  // Determina se a bola está no campo do BOT (DEFESA) ou no campo oposto (ATAQUE)
+  const isBallInBotSide = isBotTeam1
+    ? ball.x <= MIDFIELD_X
+    : ball.x >= MIDFIELD_X;
 
-    if (isBallInBotSide) {
-        // === MODO ZAGUEIRO (DEFESA) ===
-        // Objetivo: Ficar entre a bola e o próprio gol.
-        
-        const goalX = isBotTeam1 ? 0 : WIDTH;
-        const goalY = HEIGHT / 2;
-        // Distância que o Bot tenta manter-se entre a bola e o gol
-        const botDistanceToGoal = 150; 
-        
-        const dxGoal = goalX - ball.x;
-        const dyGoal = goalY - ball.y;
-        const totalDistance = Math.sqrt(dxGoal * dxGoal + dyGoal * dyGoal);
+  let idealX;
+  let idealY;
+  let xLimit;
 
-        if (totalDistance > 0) {
-            const ratio = (totalDistance - botDistanceToGoal) / totalDistance;
-            idealX = ball.x + dxGoal * ratio;
-            idealY = ball.y + dyGoal * ratio;
-        } else {
-            // Bola parada: volta para a posição defensiva centralizada
-            idealX = isBotTeam1 ? WIDTH / 4 : WIDTH * 3 / 4;
-            idealY = HEIGHT / 2;
-        }
+  if (isBallInBotSide) {
+    // === MODO ZAGUEIRO (DEFESA) ===
+    // Objetivo: Ficar entre a bola e o próprio gol.
 
-        // Limita a posição X ao próprio campo (defesa)
-        xLimit = isBotTeam1 ? MIDFIELD_X - playerRadius : MIDFIELD_X + playerRadius;
-        idealX = isBotTeam1 ? Math.min(idealX, xLimit) : Math.max(idealX, xLimit);
+    const goalX = isBotTeam1 ? 0 : WIDTH;
+    const goalY = HEIGHT / 2;
+    // Distância que o Bot tenta manter-se entre a bola e o gol
+    const botDistanceToGoal = 150;
 
+    const dxGoal = goalX - ball.x;
+    const dyGoal = goalY - ball.y;
+    const totalDistance = Math.sqrt(dxGoal * dxGoal + dyGoal * dyGoal);
+
+    if (totalDistance > 0) {
+      const ratio = (totalDistance - botDistanceToGoal) / totalDistance;
+      idealX = ball.x + dxGoal * ratio;
+      idealY = ball.y + dyGoal * ratio;
     } else {
-        // === MODO ATACANTE (OFENSIVA) ===
-        // Objetivo: Ir atrás da bola no campo adversário.
-
-        // O Bot persegue a bola no campo adversário (posição alvo é a própria bola)
-        idealX = ball.x; 
-        idealY = ball.y;
-        
-        // Limita a posição X ao campo adversário (ataque)
-        xLimit = isBotTeam1 ? MIDFIELD_X + playerRadius : MIDFIELD_X - playerRadius;
-        idealX = isBotTeam1 ? Math.max(idealX, xLimit) : Math.min(idealX, xLimit);
-
-        // Aplica uma margem de segurança para evitar que ele fique colado no gol adversário, atrapalhando a si mesmo
-        const safeZoneX = isBotTeam1 ? WIDTH - 150 : 150; 
-        idealX = isBotTeam1 ? Math.min(idealX, safeZoneX) : Math.max(idealX, safeZoneX);
+      // Bola parada: volta para a posição defensiva centralizada
+      idealX = isBotTeam1 ? WIDTH / 4 : (WIDTH * 3) / 4;
+      idealY = HEIGHT / 2;
     }
-    
-    // 5. Aplica clamping de bordas (Garante que nunca saia do campo)
-    idealX = Math.max(playerRadius, Math.min(idealX, WIDTH - playerRadius));
-    idealY = Math.max(playerRadius, Math.min(idealY, HEIGHT - playerRadius));
 
-    return { x: idealX, y: idealY };
+    // Limita a posição X ao próprio campo (defesa)
+    xLimit = isBotTeam1 ? MIDFIELD_X - playerRadius : MIDFIELD_X + playerRadius;
+    idealX = isBotTeam1 ? Math.min(idealX, xLimit) : Math.max(idealX, xLimit);
+  } else {
+    // === MODO ATACANTE (OFENSIVA) ===
+    // Objetivo: Ir atrás da bola no campo adversário.
+
+    // O Bot persegue a bola no campo adversário (posição alvo é a própria bola)
+    idealX = ball.x;
+    idealY = ball.y;
+
+    // Limita a posição X ao campo adversário (ataque)
+    xLimit = isBotTeam1 ? MIDFIELD_X + playerRadius : MIDFIELD_X - playerRadius;
+    idealX = isBotTeam1 ? Math.max(idealX, xLimit) : Math.min(idealX, xLimit);
+
+    // Aplica uma margem de segurança para evitar que ele fique colado no gol adversário, atrapalhando a si mesmo
+    const safeZoneX = isBotTeam1 ? WIDTH - 150 : 150;
+    idealX = isBotTeam1
+      ? Math.min(idealX, safeZoneX)
+      : Math.max(idealX, safeZoneX);
+  }
+
+  // 5. Aplica clamping de bordas (Garante que nunca saia do campo)
+  idealX = Math.max(playerRadius, Math.min(idealX, WIDTH - playerRadius));
+  idealY = Math.max(playerRadius, Math.min(idealY, HEIGHT - playerRadius));
+
+  return { x: idealX, y: idealY };
 }
 
 function handleBotMovement(bot, bola) {
-    // 1. LÓGICA DE KICK-OFF DO BOT
-    if (isKickOffActive && bot.team === kickOffTeam) {
-        // Se o Bot for o time que tem que chutar, ele chuta imediatamente
-        const dx_kick = bola.x - bot.x;
-        const dy_kick = bola.y - bot.y;
-        const distToBall = Math.sqrt(dx_kick * dx_kick + dy_kick * dy_kick);
-
-        // O Bot deve estar perto o suficiente
-        if (distToBall < 50) { 
-            // Vira o Kick-Off para "inativo"
-            isKickOffActive = false;
-            kickOffTeam = null;
-            broadcast({ type: "kickOffStarted" }); // Notifica clientes para iniciar
-            
-            // Chuta em direção ao meio-campo para iniciar o jogo
-            const targetX = bot.team === 1 ? MIDFIELD_X + 50 : MIDFIELD_X - 50;
-            const targetY = HEIGHT / 2;
-
-            const dx_target = targetX - bola.x;
-            const dy_target = targetY - bola.y;
-            const angle = Math.atan2(dy_target, dx_target);
-            const force = 10; // Chute suave
-
-            bola.vx = Math.cos(angle) * force;
-            bola.vy = Math.sin(angle) * force;
-            
-            bola.lastTouchId = bot.id;
-            bola.lastTouchName = bot.name;
-
-            return; // Sai da função, pois o Bot já deu o Kick-Off
-        }
-    }
-    
-    // 2. MOVIMENTO SUAVE (CORREÇÃO DO TREMOR)
-    const idealPos = calculateIdealBotPosition(bot, bola);
-    
-    let dx = idealPos.x - bot.x;
-    let dy = idealPos.y - bot.y;
-    const distToIdeal = Math.sqrt(dx * dx + dy * dy);
-    
-    if (distToIdeal > 1) { 
-        dx = dx / distToIdeal;
-        dy = dy / distToIdeal;
-        
-        // NOVO CÓDIGO: Velocidade proporcional à distância (corrige o tremor)
-        // O fator 0.8 aqui garante que ele desacelere ao se aproximar do alvo.
-        const currentSpeed = Math.min(BOT_SPEED, distToIdeal * 0.8); 
-        
-        bot.x += dx * currentSpeed;
-        bot.y += dy * currentSpeed;
-        
-        // Aplica o clamping de borda do campo
-        bot.x = Math.max(PLAYER_RADIUS, Math.min(bot.x, WIDTH - PLAYER_RADIUS));
-        bot.y = Math.max(PLAYER_RADIUS, Math.min(bot.y, HEIGHT - PLAYER_RADIUS));
-    }
-    
-    // 3. LÓGICA DE CHUTE (OFENSIVA/DEFENSIVA)
+  // 1. LÓGICA DE KICK-OFF DO BOT
+  if (isKickOffActive && bot.team === kickOffTeam) {
+    // Se o Bot for o time que tem que chutar, ele chuta imediatamente
     const dx_kick = bola.x - bot.x;
     const dy_kick = bola.y - bot.y;
     const distToBall = Math.sqrt(dx_kick * dx_kick + dy_kick * dy_kick);
 
-    if (distToBall < BOT_KICK_DISTANCE) {
-        // O alvo do chute é o gol adversário (X=800 para Time 1, X=0 para Time 2)
-        const targetX = bot.team === 1 ? WIDTH : 0;
-        const targetY = HEIGHT / 2;
+    // O Bot deve estar perto o suficiente
+    if (distToBall < 50) {
+      // Vira o Kick-Off para "inativo"
+      isKickOffActive = false;
+      kickOffTeam = null;
+      broadcast({ type: "kickOffStarted" }); // Notifica clientes para iniciar
 
-        // Calcula a direção do chute (em direção ao gol adversário)
-        const dx_target = targetX - bola.x;
-        const dy_target = targetY - bola.y;
-        const angle = Math.atan2(dy_target, dx_target);
-        
-        const force = 18; // Força do chute do Bot
-        
-        // Aplica o impulso
-        bola.vx = Math.cos(angle) * force;
-        bola.vy = Math.sin(angle) * force;
-        
-        bola.lastTouchId = bot.id;
-        bola.lastTouchName = bot.name;
+      // Chuta em direção ao meio-campo para iniciar o jogo
+      const targetX = bot.team === 1 ? MIDFIELD_X + 50 : MIDFIELD_X - 50;
+      const targetY = HEIGHT / 2;
+
+      const dx_target = targetX - bola.x;
+      const dy_target = targetY - bola.y;
+      const angle = Math.atan2(dy_target, dx_target);
+      const force = 10; // Chute suave
+
+      bola.vx = Math.cos(angle) * force;
+      bola.vy = Math.sin(angle) * force;
+
+      bola.lastTouchId = bot.id;
+      bola.lastTouchName = bot.name;
+
+      return; // Sai da função, pois o Bot já deu o Kick-Off
     }
+  }
+
+  // 2. MOVIMENTO SUAVE (CORREÇÃO DO TREMOR)
+  const idealPos = calculateIdealBotPosition(bot, bola);
+
+  let dx = idealPos.x - bot.x;
+  let dy = idealPos.y - bot.y;
+  const distToIdeal = Math.sqrt(dx * dx + dy * dy);
+
+  if (distToIdeal > 1) {
+    dx = dx / distToIdeal;
+    dy = dy / distToIdeal;
+
+    // NOVO CÓDIGO: Velocidade proporcional à distância (corrige o tremor)
+    // O fator 0.8 aqui garante que ele desacelere ao se aproximar do alvo.
+    const currentSpeed = Math.min(BOT_SPEED, distToIdeal * 0.8);
+
+    bot.x += dx * currentSpeed;
+    bot.y += dy * currentSpeed;
+
+    // Aplica o clamping de borda do campo
+    bot.x = Math.max(PLAYER_RADIUS, Math.min(bot.x, WIDTH - PLAYER_RADIUS));
+    bot.y = Math.max(PLAYER_RADIUS, Math.min(bot.y, HEIGHT - PLAYER_RADIUS));
+  }
+
+  // 3. LÓGICA DE CHUTE (OFENSIVA/DEFENSIVA)
+  const dx_kick = bola.x - bot.x;
+  const dy_kick = bola.y - bot.y;
+  const distToBall = Math.sqrt(dx_kick * dx_kick + dy_kick * dy_kick);
+
+  if (distToBall < BOT_KICK_DISTANCE) {
+    // O alvo do chute é o gol adversário (X=800 para Time 1, X=0 para Time 2)
+    const targetX = bot.team === 1 ? WIDTH : 0;
+    const targetY = HEIGHT / 2;
+
+    // Calcula a direção do chute (em direção ao gol adversário)
+    const dx_target = targetX - bola.x;
+    const dy_target = targetY - bola.y;
+    const angle = Math.atan2(dy_target, dx_target);
+
+    const force = 18; // Força do chute do Bot
+
+    // Aplica o impulso
+    bola.vx = Math.cos(angle) * force;
+    bola.vy = Math.sin(angle) * force;
+
+    bola.lastTouchId = bot.id;
+    bola.lastTouchName = bot.name;
+  }
 }
 
 function balanceTeams() {
