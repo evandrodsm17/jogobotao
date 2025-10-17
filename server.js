@@ -400,9 +400,6 @@ function removeBotById(botId) {
 
 // --- LÓGICA DE MOVIMENTO E IA DO BOT ---
 
-/**
- * Melhoria: Lógica tática aprimorada para Defensor, Meio e Atacante.
- */
 function calculateIdealBotPosition(bot, ball) {
   const playerRadius = PLAYER_RADIUS;
   const isBotTeam1 = bot.team === 1;
@@ -414,28 +411,33 @@ function calculateIdealBotPosition(bot, ball) {
   let homePos =
     teamPositions.find((pos) => pos.role === botRole) || teamPositions[0];
 
+  const isBallInOurHalf = isBotTeam1
+    ? ball.x < MIDFIELD_X
+    : ball.x > MIDFIELD_X;
+
+  // Distância máxima que o bot tentará buscar a bola
   const MAX_CHASE_DIST = 250; 
   const distToBall = Math.sqrt(
     Math.pow(ball.x - bot.x, 2) + Math.pow(ball.y - bot.y, 2)
   );
   
+  // Posição de Perseguição (se a bola estiver próxima)
   const chaseX = ball.x;
   const chaseY = ball.y;
 
   // --- 1. Definição da Posição Base Tática ---
   if (botRole === "DEFENDER") {
-    // REQUISITO: Ficar antes do meio-campo e voltar para sua posição defensiva.
-    const defensiveHomeX = isBotTeam1 ? WIDTH * 0.25 : WIDTH * 0.75;
+    // REQUISITO: Não tão perto do gol, antes do meio-campo
+    const defensiveX = isBotTeam1 ? WIDTH * 0.25 : WIDTH * 0.75;
+    const defensiveY = HEIGHT / 2;
 
-    // Se a bola está muito longe ou já passou do ponto de pressão do defensor, volta para casa.
-    if (distToBall > MAX_CHASE_DIST || 
-        (isBotTeam1 && ball.x > defensiveHomeX + 50) ||
-        (!isBotTeam1 && ball.x < defensiveHomeX - 50) ) 
-    {
+    // Se a bola está muito longe ou o defensor não precisa se mover muito, 
+    // ele volta para sua posição de guarda (homePos)
+    if (distToBall > MAX_CHASE_DIST || (isBotTeam1 ? ball.x > defensiveX + 50 : ball.x < defensiveX - 50) ) {
       idealX = homePos.x;
       idealY = homePos.y;
     } else {
-      // Tenta tomar a bola se estiver perto
+      // Tenta tomar a bola
       idealX = chaseX;
       idealY = chaseY;
     }
@@ -447,8 +449,9 @@ function calculateIdealBotPosition(bot, ball) {
       : Math.max(idealX, maxAdvanceX);
 
   } else if (botRole === "MIDFIELD") {
-    // REQUISITO: Ficar entre os dois campos (centralizado)
-    
+    // 🟢 MELHORIA 1.1: Aumenta a área de atuação do Meio-Campista (cobre 75% do campo)
+    const middleX = MIDFIELD_X;
+
     if (distToBall < MAX_CHASE_DIST) {
       // Tenta tomar a bola se estiver perto
       idealX = chaseX;
@@ -459,14 +462,15 @@ function calculateIdealBotPosition(bot, ball) {
       idealY = ball.y;
     }
 
-    // Clamping: Meio-campo deve se manter na zona central
-    const minX = isBotTeam1 ? 150 : WIDTH - 450;
-    const maxX = isBotTeam1 ? WIDTH - 350 : 350;
+    // Clamping: Meio-campo deve se manter na zona central ampliada
+    const minX = isBotTeam1 ? 50 : WIDTH - 600; // Recua mais na defesa
+    const maxX = isBotTeam1 ? WIDTH - 200 : 200; // Avança mais no ataque
 
     idealX = Math.max(minX, Math.min(idealX, maxX));
+
   } else if (botRole === "ATTACKER") {
     // REQUISITO: Ficar próximo da área adversária e ser agressivo
-    const offensiveHomeX = isBotTeam1 ? WIDTH * 0.75 : WIDTH * 0.25;
+    const offensiveX = isBotTeam1 ? WIDTH * 0.75 : WIDTH * 0.25;
 
     if (distToBall < MAX_CHASE_DIST * 1.5) {
       // Atacante é mais agressivo e persegue de mais longe
@@ -474,7 +478,7 @@ function calculateIdealBotPosition(bot, ball) {
       idealY = chaseY;
     } else {
       // Volta para a posição de ataque
-      idealX = offensiveHomeX;
+      idealX = offensiveX;
       idealY = homePos.y;
     }
 
@@ -487,7 +491,7 @@ function calculateIdealBotPosition(bot, ball) {
       : Math.min(idealX, maxOffensiveX);
   }
 
-  // 2. Comportamento de Desagregação (Evitar Aglomeração)
+  // 2. Comportamento de Desagregação (Evitar Aglomeração) (MANTIDO)
   for (const id in players) {
     const p = players[id];
     if (p.team === bot.team && p.id !== bot.id) {
@@ -503,16 +507,13 @@ function calculateIdealBotPosition(bot, ball) {
     }
   }
 
-  // 3. Aplica clamping de bordas
+  // 3. Aplica clamping de bordas (MANTIDO)
   idealX = Math.max(playerRadius, Math.min(idealX, WIDTH - playerRadius));
   idealY = Math.max(playerRadius, Math.min(idealY, HEIGHT - playerRadius));
 
   return { x: idealX, y: idealY };
 }
 
-/**
- * Melhoria: Lógica de chute aprimorada para Defensor (alívio) e Meio (passe).
- */
 function handleBotMovement(bot, bola) {
   // 1. LÓGICA DE KICK-OFF DO BOT (Prioridade)
   if (isKickOffActive && bot.team === kickOffTeam) {
@@ -530,6 +531,7 @@ function handleBotMovement(bot, bola) {
       if (dist < minDist) {
         minDist = dist;
         closestBot = p;
+        
       }
     }
 
@@ -629,54 +631,54 @@ function handleBotMovement(bot, bola) {
     let errorFactor = 1;
 
     if (bot.role === "DEFENDER") {
-      // REQUISITO: Chutar forte para o centro do campo para alívio
-      targetX = bot.team === 1 ? MIDFIELD_X + 100 : MIDFIELD_X - 100;
+      targetX = bot.team === 1 ? WIDTH * 0.75 : WIDTH * 0.25;
       targetY = HEIGHT / 2;
-      force = 10; // Chute forte para alívio
-      errorFactor = 2.5; // Mais erro, chute mais aleatório
-
+      force = 8; // Chute fraco para alívio
+      errorFactor = 2.0;
     } else if (bot.role === "MIDFIELD") {
-      // REQUISITO: Chutar para o companheiro de equipe mais ofensivo (Passe)
-      const teammates = Object.values(players).filter(
-        (p) => p.team === bot.team && p.id !== bot.id && !BOT_IDS.includes(p.id) // Foca em companheiros humanos se houver
-      );
-      
-      // Encontra o companheiro mais à frente no campo
-      let mostOffensiveTeammate = null;
-      let bestX = bot.team === 1 ? -Infinity : Infinity;
-      
-      // Se não houver humano, considera todos
-      const playersToPass = teammates.length > 0 ? teammates : Object.values(players).filter(
-        (p) => p.team === bot.team && p.id !== bot.id
-      );
+        // 🟢 MELHORIA 1.2: Lógica de Passe Refinada para Midfield Bot
+        const teammates = Object.values(players).filter(
+            (p) => p.team === bot.team && p.id !== bot.id
+        );
+        
+        let targetPlayer = null;
+        
+        // Encontra o companheiro que está MAIS PRÓXIMO DO GOL ADVERSÁRIO.
+        const goalX = bot.team === 1 ? WIDTH : 0;
+        let closestDistToGoal = Infinity;
 
-      for (const t of playersToPass) {
-        if ((bot.team === 1 && t.x > bestX) || (bot.team === 2 && t.x < bestX)) {
-          bestX = t.x;
-          mostOffensiveTeammate = t;
-        }
-      }
-      
-      if (mostOffensiveTeammate) {
-        // Mira um pouco à frente do companheiro para passe
-        targetX = mostOffensiveTeammate.x + (bot.team === 1 ? 50 : -50);
-        targetY = mostOffensiveTeammate.y;
-        force = 8; // Chute controlado (passe)
-        errorFactor = 0.5; // Pouco erro para passe
-      } else {
-        // Se não houver companheiro (ex: só ele em campo), chuta para a posição ofensiva padrão
-        targetX = bot.team === 1 ? WIDTH * 0.75 : WIDTH * 0.25;
-        targetY = HEIGHT / 2;
-        force = 8;
-        errorFactor = 1.0;
-      }
+        for (const t of teammates) {
+            const distToGoal = Math.abs(t.x - goalX);
+            
+            // Garante que o jogador alvo esteja à frente do bot (mais perto do gol)
+            const isAhead = bot.team === 1 ? t.x > bot.x : t.x < bot.x;
+            
+            if (isAhead && distToGoal < closestDistToGoal) {
+                closestDistToGoal = distToGoal;
+                targetPlayer = t;
+            }
+        }
+        
+        if (targetPlayer) {
+            // Mira um pouco à frente do companheiro para passe
+            targetX = targetPlayer.x + (bot.team === 1 ? 30 : -30);
+            targetY = targetPlayer.y;
+            force = 8; // Chute controlado (passe)
+            errorFactor = 0.5; // Pouco erro para passe
+        } else {
+            // Fallback: Chuta para a posição ofensiva padrão (se não tiver ninguém à frente)
+            targetX = bot.team === 1 ? WIDTH * 0.75 : WIDTH * 0.25;
+            targetY = HEIGHT / 2;
+            force = 8;
+            errorFactor = 1.0;
+        }
 
     } else {
-      // ATTACKER (Chuta a gol)
+      // ATTACKER
       targetX = bot.team === 1 ? WIDTH : 0;
       targetY = HEIGHT / 2;
-      force = 13; // Chute muito forte
-      errorFactor = 0.8; // Erro razoável para que não seja sempre gol
+      force = 12; // Chute forte
+      errorFactor = 0.8;
     }
 
     const kickError =
@@ -963,7 +965,72 @@ wss.on("connection", (ws) => {
         p.x = Math.max(playerRadius, Math.min(tempX, WIDTH - playerRadius));
         p.y = Math.max(playerRadius, Math.min(tempY, HEIGHT - playerRadius));
 
-        if (input === "kick") {
+        // 🟢 NOVO: LÓGICA DE PASSE ASSISTIDO
+        if (input === "pass") {
+          const dx_pass = bola.x - p.x;
+          const dy_pass = bola.y - p.y;
+          const distToBall = Math.sqrt(dx_pass * dx_pass + dy_pass * dy_pass);
+
+          if (distToBall < 50) { // Verifica se o jogador está perto da bola
+            if (isKickOffActive && p.team !== kickOffTeam) return; // Não pode chutar a bola adversária no KO
+
+            // 1. Encontra o alvo: o jogador da equipe mais próximo do gol adversário e que esteja À FRENTE
+            const teammates = Object.values(players).filter(
+              (t) => t.team === p.team && t.id !== p.id
+            );
+            
+            let targetPlayer = null;
+            const goalX = p.team === 1 ? WIDTH : 0;
+            let closestDistToGoal = Infinity;
+
+            for (const t of teammates) {
+              const distToGoal = Math.abs(t.x - goalX);
+              
+              // Garante que o jogador alvo esteja à frente do passador
+              const isAhead = p.team === 1 ? t.x > p.x : t.x < p.x;
+              
+              // Prioridade: Apenas jogadores à frente e mais próximos do gol adversário
+              if (isAhead && distToGoal < closestDistToGoal) {
+                closestDistToGoal = distToGoal;
+                targetPlayer = t;
+              }
+            }
+
+            let targetX, targetY;
+            const force = 7; // Força de passe controlada
+            
+            if (targetPlayer) {
+              // Se houver um alvo válido, mira para a posição dele
+              targetX = targetPlayer.x + (p.team === 1 ? 20 : -20); // Mira ligeiramente à frente
+              targetY = targetPlayer.y;
+            } else {
+              // Fallback: Se não há ninguém à frente, chuta suavemente para frente (na vertical do jogador)
+              targetX = p.x + (p.team === 1 ? 150 : -150);
+              targetY = p.y;
+            }
+
+            // 2. Calcula o vetor de chute
+            const dx_target = targetX - bola.x;
+            const dy_target = targetY - bola.y;
+            const angle = Math.atan2(dy_target, dx_target);
+
+            bola.vx = Math.cos(angle) * force;
+            bola.vy = Math.sin(angle) * force;
+
+            bola.lastTouchId = p.id;
+            bola.lastTouchName = p.name;
+            
+            // Se foi um Kick Off, encerra-o após o passe
+            if (isKickOffActive) {
+              isKickOffActive = false;
+              kickOffTeam = null;
+              broadcast({ type: "kickOffStarted" });
+            }
+        }
+        }
+
+        // LÓGICA DE CHUTE (KICK)
+        else if (input === "kick") {
           const dx_kick = bola.x - p.x;
           const dy_kick = bola.y - p.y;
           const dist = Math.sqrt(dx_kick * dx_kick + dy_kick * dy_kick);
@@ -998,13 +1065,13 @@ wss.on("connection", (ws) => {
     const player = players[playerId];
     console.log(`🔴 Jogador saiu: ${playerId}`);
 
-    // Libera o número do jogador, se ele for humano e não for bot
+    // Libera o número do jogador, se ele for humano
     if (player && !BOT_IDS.includes(playerId)) {
       const teamIdString = `team${player.team}`;
       releasePlayerNumber(teamIdString, player.number);
     }
 
-    // *** LÓGICA DE TRANSFERÊNCIA DO HOST (CORRIGIDA) ***
+    // *** LÓGICA DE TRANSFERÊNCIA DO HOST (ANTES DE DELETAR O JOGADOR) ***
     if (playerId === hostId) {
       // Encontra TODOS os jogadores humanos restantes, EXCLUINDO o Host que está saindo
       const remainingHumanPlayers = Object.values(players).filter(
