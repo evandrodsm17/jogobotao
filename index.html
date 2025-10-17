@@ -17,7 +17,7 @@
         border: 2px solid white;
       }
 
-      .score-separator{
+      .score-separator {
         font-size: 0.2em;
         font-weight: normal;
         color: #c6c209;
@@ -43,8 +43,109 @@
         /* Adiciona um background sutil para destaque se desejar */
         background: #1c1c1c;
         padding: 5px 0;
-        border-radius: 5px; */
+        border-radius: 5px;
       }
+
+      /* ========================================================== */
+      /* NOVO ESTILO: Configuração Inicial */
+      /* ========================================================== */
+
+      #initialSetupScreen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.9);
+        display: none; /* Começa escondido */
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        z-index: 30; /* Acima de tudo */
+        padding: 20px;
+        box-sizing: border-box;
+      }
+
+      #setupContent {
+        background: #3a3a3a;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+        max-width: 500px;
+        width: 90%;
+      }
+
+      #playerNameInput {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 20px;
+        border: 2px solid #555;
+        border-radius: 5px;
+        font-size: 1.2em;
+        box-sizing: border-box;
+      }
+
+      #teamSelection {
+        display: flex;
+        justify-content: space-around;
+        gap: 15px;
+        margin-bottom: 25px;
+      }
+
+      .teamCard {
+        flex: 1;
+        padding: 15px;
+        border: 3px solid #555;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+        text-align: center;
+      }
+
+      .teamCard.team1 {
+        background: #9e0101; /* Vermelho Vitória */
+        color: white;
+      }
+
+      .teamCard.team2 {
+        background: #2e30eb; /* Azul Bahia */
+        color: white;
+      }
+
+      .teamCard:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
+      }
+
+      .teamCard.selected {
+        border-color: yellow; /* Amarelo de destaque */
+        box-shadow: 0 0 5px yellow;
+        transform: scale(1.05);
+      }
+      .teamCard.selected h4 {
+        text-shadow: 1px 1px 3px black;
+      }
+
+      #connectButton {
+        width: 100%;
+        padding: 15px;
+        font-size: 1.4em;
+        font-weight: bold;
+        background: #4caf50;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background 0.3s;
+      }
+
+      #connectButton:hover {
+        background: #66bb6a;
+      }
+
+      /* ========================================================== */
+      /* ESTILOS EXISTENTES (Game Over, Mensagem de Evento, etc.) */
+      /* ========================================================== */
 
       /* NOVO ESTILO: Animação de entrada para Game Over */
       @keyframes slide-in-fade {
@@ -245,9 +346,8 @@
 
       /* O Canvas precisa de position: relative para que o #eventMessage seja posicionado corretamente em relação a ele. */
       #game {
-          position: relative;
+        position: relative;
       }
-
 
       /* Regra para EXIBIR os controles SÓ EM TELAS PEQUENAS (Celulares) */
       @media (max-width: 950px) {
@@ -257,7 +357,7 @@
         }
 
         .painel-placar-topo {
-            margin: 10px auto 0; /* Garante que fique no topo e centralizado */
+          margin: 10px auto 0; /* Garante que fique no topo e centralizado */
         }
 
         #team1Panel,
@@ -268,12 +368,12 @@
         }
 
         #game {
-             margin: 10px auto; /* Garante que o canvas fique centralizado */
+          margin: 10px auto; /* Garante que o canvas fique centralizado */
         }
 
         #eventMessage {
-            /* Ajusta a posição vertical da mensagem em telas pequenas (campo com 500px de altura) */
-            top: 250px;
+          /* Ajusta a posição vertical da mensagem em telas pequenas (campo com 500px de altura) */
+          top: 250px;
         }
 
         /* Estilos de controle de toque... (mantidos do seu código) */
@@ -354,6 +454,29 @@
       </div>
     </div>
 
+    <div id="initialSetupScreen">
+      <div id="setupContent">
+        <h2>Escolha seu Time e Nome</h2>
+        <input
+          type="text"
+          id="playerNameInput"
+          placeholder="Seu nome (máx. 10 caracteres)"
+          maxlength="10"
+        />
+
+        <div id="teamSelection">
+          <div class="teamCard team1" data-team="1">
+            <h4>Esporte Clube Vitória</h4>
+          </div>
+          <div class="teamCard team2" data-team="2">
+            <h4>Esporte Clube Bahia</h4>
+          </div>
+        </div>
+
+        <button id="connectButton" disabled>CONECTAR AO JOGO</button>
+      </div>
+    </div>
+
     <div id="gameOverScreen">
       <h1 id="winnerMessage" style="font-size: 4em"></h1>
       <button
@@ -397,6 +520,12 @@
       const team1List = document.getElementById("team1List");
       const team2List = document.getElementById("team2List");
 
+      // NOVOS ELEMENTOS DO MENU
+      const initialSetupScreen = document.getElementById("initialSetupScreen");
+      const playerNameInput = document.getElementById("playerNameInput");
+      const teamCards = document.querySelectorAll(".teamCard");
+      const connectButton = document.getElementById("connectButton");
+
       const WIDTH = canvas.width; // 800
       const HEIGHT = canvas.height; // 500
 
@@ -409,56 +538,83 @@
       let gameTime = 180;
       let isKickOffActive = false;
       let kickOffTeam = null;
+      let selectedTeam = null; // RASTREIA O TIME SELECIONADO NO NOVO MENU
 
-      function promptTeamAndName() {
-        let playerName = null;
-        let playerTeam = null;
+      // NOVA FUNÇÃO DE CONEXÃO E ENVIO DE INFO
+      function attemptConnection() {
+        const playerName = playerNameInput.value.trim();
         const maxLength = 10;
 
-        // Loop para forçar o usuário a digitar um nome válido
-        while (
-          !playerName ||
-          playerName.trim().length === 0 ||
-          playerName.length > maxLength
-        ) {
-          playerName = window.prompt(
-            `Escolha seu nome de jogador (máx. ${maxLength} caracteres):`
-          );
-
-          if (playerName === null) {
-            playerName = "Player"; // Nome padrão se cancelar
-            break;
-          }
-          playerName = playerName.trim().substring(0, maxLength);
-
-          if (playerName.length === 0) {
-            alert("Por favor, digite um nome válido.");
-          }
+        if (playerName.length === 0 || playerName.length > maxLength) {
+          alert(`Por favor, digite um nome válido (máx. ${maxLength} caracteres).`);
+          return;
         }
 
-        // Loop para forçar o usuário a escolher um time
-        while (playerTeam !== 1 && playerTeam !== 2) {
-          let teamInput = window.prompt(
-            `Olá, ${playerName}! Escolha seu time:\n\n1 - VITÓRIA\n2 - BAHIA`
-          );
-
-          if (teamInput === null) {
-            playerTeam = 1; // Time padrão se cancelar
-            break;
-          }
-
-          const teamNum = parseInt(teamInput.trim());
-          if (teamNum === 1 || teamNum === 2) {
-            playerTeam = teamNum;
-          } else {
-            alert("Escolha inválida. Por favor, digite 1 ou 2.");
-          }
+        if (!selectedTeam) {
+          alert("Por favor, selecione um time.");
+          return;
         }
 
-        return { name: playerName, team: playerTeam };
+        initialSetupScreen.style.display = "none";
+        status.textContent = "Aguardando partida...";
+
+        // Envia as informações do novo jogador para o servidor
+        ws.send(
+          JSON.stringify({
+            type: "newPlayer",
+            player: {
+              id: playerId,
+              name: playerName,
+              team: selectedTeam,
+            },
+          })
+        );
       }
 
+      // NOVO: Adiciona a lógica de seleção de time e validação
+      teamCards.forEach((card) => {
+        card.addEventListener("click", function () {
+          // Remove a seleção de todos os cards
+          teamCards.forEach((c) => c.classList.remove("selected"));
+
+          // Adiciona a seleção ao card clicado
+          this.classList.add("selected");
+          selectedTeam = parseInt(this.getAttribute("data-team"));
+
+          // Habilita o botão de conexão se o nome for válido
+          if (playerNameInput.value.trim().length > 0) {
+            connectButton.disabled = false;
+          }
+        });
+      });
+
+      // NOVO: Validação do nome em tempo real
+      playerNameInput.addEventListener("input", function () {
+        this.value = this.value.substring(0, 10); // Garante max length
+        if (this.value.trim().length > 0 && selectedTeam) {
+          connectButton.disabled = false;
+        } else {
+          connectButton.disabled = true;
+        }
+      });
+
+      // NOVO: Ação do botão Conectar
+      connectButton.addEventListener("click", attemptConnection);
+
       function drawField() {
+        // Cores de grama para o efeito de faixa
+        const lightGreen = "#0b572d"; // Cor de fundo do canvas (mais escura)
+        const darkGreen = "#084122"; // Uma cor um pouco mais escura
+        const stripeWidth = 50; // Largura da faixa
+
+        // 1. Desenha as faixas de grama (antes de tudo)
+        for (let i = 0; i * stripeWidth < WIDTH; i++) {
+          const x = i * stripeWidth;
+          const color = i % 2 === 0 ? darkGreen : lightGreen; // Alterna as cores
+          ctx.fillStyle = color;
+          ctx.fillRect(x, 0, stripeWidth, HEIGHT);
+        }
+
         // Constantes de dimensão (mantidas)
         const playerGoalWidth = 15;
         const goalAreaWidth = 70;
@@ -503,7 +659,6 @@
         // FIM DO GRUPO 1
 
         // --- GRUPO 2: CÍRCULO CENTRAL (PRECISA DE UM NOVO BEGIN PATH) ---
-        // CORREÇÃO: Usamos um novo caminho para garantir que não haja conexão com a linha.
         ctx.beginPath();
         ctx.arc(WIDTH / 2, HEIGHT / 2, 50, 0, Math.PI * 2);
         ctx.stroke();
@@ -596,9 +751,7 @@
 
         // Atualiza placar e tempo
         scoreEl.textContent = `${score[1]} x ${score[2]}`;
-        const min = Math.floor(gameTime / 60)
-          .toString()
-          .padStart(2, "0");
+        const min = Math.floor(gameTime / 60).toString().padStart(2, "0");
         const sec = (gameTime % 60).toString().padStart(2, "0");
         timeEl.textContent = `${min}:${sec}`;
       }
@@ -651,8 +804,8 @@
             li.textContent = name;
             // Adiciona uma cor para o 'VOCÊ'
             if (name.includes("(VOCÊ)")) {
-              li.style.background = "red";
-              li.style.color = "white";
+              li.style.background = "#74ed49";
+              li.style.color = "black";
             } else {
               li.style.background = "none";
               li.style.color = "black";
@@ -670,8 +823,8 @@
             li.textContent = name;
             // Adiciona uma cor para o 'VOCÊ'
             if (name.includes("(VOCÊ)")) {
-              li.style.background = "blue";
-              li.style.color = "white";
+              li.style.background = "#74ed49";
+              li.style.color = "black";
             } else {
               li.style.color = "black";
             }
@@ -686,11 +839,16 @@
         eventMessageEl.style.display = "block";
         eventMessageEl.classList.add("event-message-active"); // ADICIONA A CLASSE PARA INICIAR A ANIMAÇÃO
 
+        // Define a duração da animação para que o timeout seja sincronizado (se a animação tiver fade-out)
+        // Como a animação dura 4s, vamos usar 4s como default, e o estilo já faz o fade-out.
+        const effectiveDuration = duration;
+
         setTimeout(() => {
-          eventMessageEl.classList.remove("event-message-active"); // REMOVE A CLASSE
-          // Oculta após a animação (ou ligeiramente antes se o fade-out for rápido)
+          // A classe de animação é removida pelo CSS (animation-fill-mode: forwards) + o próprio fade-out da animação.
+          // Para evitar que a próxima mensagem seja afetada, garantimos a remoção e o display:none.
+          eventMessageEl.classList.remove("event-message-active"); 
           eventMessageEl.style.display = "none";
-        }, duration);
+        }, effectiveDuration);
       }
 
       restartButton.onclick = () => {
@@ -722,17 +880,16 @@
           case "welcome":
             playerId = msg.playerId;
 
-            // NOVO: Coleta nome e time
-            const playerInfo = promptTeamAndName();
-            const playerName = playerInfo.name;
-            const team = playerInfo.team; // Usa o time escolhido
+            // NOVO: Exibe a tela de configuração inicial
+            initialSetupScreen.style.display = "flex";
+            status.textContent = "Escolha seu nome e time...";
 
-            ws.send(
-              JSON.stringify({
-                type: "newPlayer",
-                player: { id: playerId, name: playerName, team },
-              })
-            );
+            // Limpa o nome e seleção de time anterior
+            playerNameInput.value = "";
+            selectedTeam = null;
+            connectButton.disabled = true;
+            teamCards.forEach((c) => c.classList.remove("selected"));
+
             break;
 
           case "stateSync":
@@ -768,6 +925,10 @@
 
             isKickOffActive = msg.kickOff;
             kickOffTeam = msg.kickOffTeam;
+
+            // Limpa mensagens de evento anteriores
+            eventMessageEl.classList.remove("event-message-active");
+            eventMessageEl.style.display = "none";
 
             if (isKickOffActive) {
               const teamName = kickOffTeam === 1 ? "VERMELHO" : "AZUL";
