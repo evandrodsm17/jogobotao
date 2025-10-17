@@ -738,18 +738,25 @@ function handleBotMovement(bot, bola) {
   let dx = idealPos.x - bot.x;
   let dy = idealPos.y - bot.y;
   const distToIdeal = Math.sqrt(dx * dx + dy * dy);
+// Usa um fator de suavização (0.1 ou 0.2) para que o bot não teletransporte, mas deslize até a posição.
+const smoothingFactor = 0.15; 
+const currentSpeed = BOT_SPEED * smoothingFactor;
+ 
+ if (distToIdeal > 1) {
+    // Calcula o quanto mover, limitado pela velocidade e pelo fator de suavização
+    const moveDistance = Math.min(distToIdeal, currentSpeed);
+    
+    // Normaliza o vetor de direção
+    const ratio = moveDistance / distToIdeal;
 
-  if (distToIdeal > 1) {
-    dx = dx / distToIdeal;
-    dy = dy / distToIdeal; // Velocidade proporcional à distância (corrige o tremor)
-    const currentSpeed = Math.min(BOT_SPEED, distToIdeal * 0.8);
-
-    bot.x += dx * currentSpeed;
-    bot.y += dy * currentSpeed; // Aplica o clamping de borda do campo
-
-    bot.x = Math.max(PLAYER_RADIUS, Math.min(bot.x, WIDTH - PLAYER_RADIUS));
-    bot.y = Math.max(PLAYER_RADIUS, Math.min(bot.y, HEIGHT - PLAYER_RADIUS));
-  } 
+    bot.x += dx * ratio;
+    bot.y += dy * ratio; 
+    
+    // Aplica o clamping de borda do campo
+    const playerRadius = PLAYER_RADIUS;
+    bot.x = Math.max(playerRadius, Math.min(bot.x, WIDTH - playerRadius));
+    bot.y = Math.max(playerRadius, Math.min(bot.y, HEIGHT - playerRadius));
+}
   
   // 3. LÓGICA DE CHUTE (OFENSIVA/DEFENSIVA)
   const dx_kick = bola.x - bot.x;
@@ -787,85 +794,81 @@ function handleBotMovement(bot, bola) {
   }
 }
 
-// [SUBSTITUIÇÃO COMPLETA] - Lógica para garantir MAX_TEAM_SIZE (10 jogadores no total)
+// [REVISADO E OTIMIZADO] - Lógica para garantir MAX_TEAM_SIZE (10 jogadores no total)
 function balanceTeams() {
-  let humanCount = { 1: 0, 2: 0 };
-  
-  // 1. Contar Humanos e Bots ativos para saber o que preencher
-  const activeBotIds = new Set();
-  for (const id in players) {
-    if (BOT_IDS.includes(id)) {
-      activeBotIds.add(id);
-    } else {
-      humanCount[players[id].team]++;
-    }
-  }
+    let humanCount = { 1: 0, 2: 0 };
+    let currentBots = { 1: [], 2: [] };
+    const availableBotIds = new Set(BOT_IDS);
+    
+    // 1. Contar Humanos e separar Bots ativos
+    for (const id in players) {
+        const p = players[id];
+        if (BOT_IDS.includes(id)) {
+            currentBots[p.team].push(p);
+            availableBotIds.delete(id); // Remove ID do bot ativo
+        } else {
+            humanCount[p.team]++;
+        }
+    }
 
-  const availableBotIds = BOT_IDS.filter(id => !activeBotIds.has(id));
-  
-  // 2. Loop para balancear ambos os times
-  for (let team = 1; team <= 2; team++) {
-    const requiredBots = MAX_TEAM_SIZE - humanCount[team];
-    
-    // 3. Se houver Bots demais no time (Isso só aconteceria se um bot fosse adicionado por erro, 
-    // mas é bom ter uma verificação)
-    const currentBotsInTeam = Object.values(players).filter(p => p.team === team && BOT_IDS.includes(p.id)).length;
-    
-    if (currentBotsInTeam > requiredBots) {
-      // Remove o excesso (o último bot adicionado para simplificar)
-      const botToRemove = Object.values(players)
-        .filter(p => p.team === team && BOT_IDS.includes(p.id))
-        .pop();
+    // 2. Loop para balancear ambos os times
+    for (let team = 1; team <= 2; team++) {
+        const requiredBots = MAX_TEAM_SIZE - humanCount[team];
+        const botsInTeam = currentBots[team];
 
-      if (botToRemove) {
-        console.log(`[BOT] Removendo Bot ${botToRemove.id} do Time ${team} (Excesso).`);
-        delete players[botToRemove.id];
-        broadcast({ type: "playerLeft", playerId: botToRemove.id });
-      }
-    }
+        // 2a. REMOVER Bots em EXCESSO (Ex: 3 humanos, 3 bots = 6 jogadores. Deve remover 1 bot)
+        if (botsInTeam.length > requiredBots) {
+            const botsToRemove = botsInTeam.slice(requiredBots);
+            botsToRemove.forEach(bot => {
+                console.log(`[BOT] Removendo Bot ${bot.id} (Excesso) do Time ${team}.`);
+                delete players[bot.id];
+                broadcast({ type: "playerLeft", playerId: bot.id });
+                availableBotIds.add(bot.id); // Libera o ID
+            });
+            // O vetor botsInTeam agora tem o tamanho correto
+            botsInTeam.splice(requiredBots); 
+        }
 
-    // 4. Adicionar Bots faltantes
-    let botsToCreate = MAX_TEAM_SIZE - humanCount[team];
-    
-    // Subtrai os bots JÁ ATIVOS no time
-    botsToCreate -= Object.values(players).filter(p => p.team === team && BOT_IDS.includes(p.id)).length;
+        // 2b. ADICIONAR Bots FALTANTES
+        let botsToCreate = requiredBots - botsInTeam.length;
+        
+        while (botsToCreate > 0 && availableBotIds.size > 0) {
+            // Pega o primeiro ID disponível (Set não tem índice, então converte para Array)
+            const botId = Array.from(availableBotIds).shift();
+            availableBotIds.delete(botId); // Remove da lista de disponíveis
+            
+            // O índice inicial deve ser a próxima posição VAZIA:
+            const initialPosIndex = humanCount[team] + botsInTeam.length;
 
+            const initialPosArray = team === 1 ? team1Positions : team2Positions;
+            // Se o índice for maior que o array de posições, algo está errado
+            if (initialPosIndex >= initialPosArray.length) {
+                 console.error(`[BOT] Limite de posições excedido no Time ${team}. Parando.`);
+                 break;
+            }
+            
+            const initialPos = initialPosArray[initialPosIndex];
+            const BOT_NAME = team === 1 ? `RAFAEL-BOT-${botId.slice(-3)}` : `MARCELAO-BOT-${botId.slice(-3)}`;
 
-    while (botsToCreate > 0 && availableBotIds.length > 0) {
-      const botId = availableBotIds.shift(); // Pega o próximo ID disponível
-      
-      // O índice de posição deve ser o próximo VAZIO, que é a contagem de humanos
-      const initialPosIndex = humanCount[team] + (MAX_TEAM_SIZE - requiredBots - botsToCreate); 
-      
-      const initialPosArray = team === 1 ? team1Positions : team2Positions;
-      const initialPos = initialPosArray[initialPosIndex % initialPosArray.length];
+            const newBot = {
+                id: botId,
+                name: BOT_NAME,
+                team: team,
+                x: initialPos.x,
+                y: initialPos.y,
+                role: initialPos.role, 
+                number: 90 + BOT_IDS.indexOf(botId) + 1,
+            };
+            
+            players[botId] = newBot;
+            botsInTeam.push(newBot); // Adiciona ao array temporário
+            
+            console.log(`[BOT] Adicionando Bot ${botId} (${initialPos.role}) no Time ${team}. Posição: ${initialPosIndex}`);
+            broadcast({ type: "newPlayer", player: players[botId] });
 
-      if (!initialPos) {
-        console.error(`[BOT] Posição inicial não encontrada para o Bot ${botId} no Time ${team}`);
-        break;
-      }
-
-      const BOT_NAME = team === 1 ? `RAFAEL-BOT-${botId.slice(-3)}` : `MARCELAO-BOT-${botId.slice(-3)}`;
-
-      players[botId] = {
-        id: botId,
-        name: BOT_NAME,
-        team: team,
-        x: initialPos.x,
-        y: initialPos.y,
-        role: initialPos.role, // NOVO: Atribui o papel da posição fixa
-        number: 90 + BOT_IDS.indexOf(botId) + 1, // Números altos para Bots (91, 92...)
-      };
-
-      console.log(`[BOT] Adicionando Bot ${botId} (${initialPos.role}) no Time ${team}`);
-      broadcast({ type: "newPlayer", player: players[botId] });
-
-      botsToCreate--;
-    }
-  }
-  
-  // Garante que todos os jogadores estão nas posições corretas (incluindo as recém-criadas)
-  resetAllPlayers();
+            botsToCreate--;
+        }
+    }
 }
 
 // ------------------------------------------------------------------
