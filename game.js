@@ -464,17 +464,19 @@ ws.onmessage = (event) => {
       if (isHost) {
         hostControlsEl.style.display = "block";
         gameStatusDisplayEl.textContent =
-          "Status: VOCÊ é o Host. Gerencie a partida.";
+          "Status: ⭐ VOCÊ é o Host. Gerencie a partida."; // Adicionado emoji
       } else {
         hostControlsEl.style.display = "none";
-        gameStatusDisplayEl.textContent = "Status: Aguardando o Host.";
+        gameStatusDisplayEl.textContent = "Status: ⏳ Aguardando o Host."; // Adicionado emoji
       }
-      break;
+      break; // 🟢 NOVO: TRATAMENTO DA TRANSFERÊNCIA DE HOST
 
-    // 🟢 NOVO: TRATAMENTO DA TRANSFERÊNCIA DE HOST
-    case "hostChanged":
-      // Se eu receber esta mensagem, não sou o novo host, mas o status mudou.
-      // A mensagem 'hostStatus' virá logo em seguida se eu for o novo host.
+    case "hostChanged": // Se o Host anterior saiu e eu recebi esta mensagem, eu não sou o novo Host (caso contrário, eu receberia 'hostStatus' logo em seguida). // Por precaução, garanto que meus controles sejam ocultados.
+      if (msg.newHostId !== playerId) {
+        isHost = false;
+        hostControlsEl.style.display = "none";
+        gameStatusDisplayEl.textContent = "Status: ⏳ Aguardando o Host.";
+      }
       alert(`O Host mudou! O novo Host é: ${msg.newHostName}.`);
       break;
 
@@ -668,29 +670,28 @@ if (touchControls) {
   });
 } // Loop de desenho
 
-
 // --- LIGAÇÃO DOS CONTROLES DO HOST ---
 
 // Botões de Partida
-document.getElementById('start-btn').onclick = startGameClient;
-document.getElementById('restart-btn').onclick = restartGameClient;
+document.getElementById("start-btn").onclick = startGameClient;
+document.getElementById("restart-btn").onclick = restartGameClient;
 
 // Botões de Bots (Adicionar)
-document.querySelectorAll('.bot-add-btn').forEach(button => {
-    button.addEventListener('click', function() {
-        const team = parseInt(this.closest('.bot-manager').dataset.teamId);
-        const role = this.dataset.position;
-        addBotClient(team, role);
-    });
+document.querySelectorAll(".bot-add-btn").forEach((button) => {
+  button.addEventListener("click", function () {
+    const team = parseInt(this.closest(".bot-manager").dataset.teamId);
+    const role = this.dataset.position;
+    addBotClient(team, role);
+  });
 });
 
 // Botões de Bots (Remover)
-document.querySelectorAll('.bot-remove-btn').forEach(button => {
-    button.addEventListener('click', function() {
-        const team = parseInt(this.closest('.bot-manager').dataset.teamId);
-        const role = this.dataset.position;
-        removeBotClient(team, role);
-    });
+document.querySelectorAll(".bot-remove-btn").forEach((button) => {
+  button.addEventListener("click", function () {
+    const team = parseInt(this.closest(".bot-manager").dataset.teamId);
+    const role = this.dataset.position;
+    removeBotClient(team, role);
+  });
 });
 
 setInterval(desenhar, 30);
