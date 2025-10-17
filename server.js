@@ -49,6 +49,8 @@ const BOT_ID = "bot-player-001";
 const BOT_SPEED = 2; // Um pouco mais lento que o humano
 const BOT_KICK_DISTANCE = 40; // O Bot chuta quando a bola está próxima
 
+const BOT_KICK_ERROR_MAX = 100;
+
 // CONSTANTES DE GOL AJUSTADAS
 const GOAL_HEIGHT = 100; // Gol de 100px de altura
 const GOAL_TOP = (HEIGHT - GOAL_HEIGHT) / 2; // (500 - 100) / 2 = 200
@@ -630,14 +632,18 @@ function handleBotMovement(bot, bola) {
   if (distToBall < BOT_KICK_DISTANCE) {
     // O alvo do chute é o gol adversário (X=800 para Time 1, X=0 para Time 2)
     const targetX = bot.team === 1 ? WIDTH : 0;
-    const targetY = HEIGHT / 2;
+    const centerGoalY = HEIGHT / 2;
+    
+    const kickError = (Math.random() * 2 - 1) * BOT_KICK_ERROR_MAX;
+    let targetY = centerGoalY + kickError; // Opcional: Garante que o alvo não esteja muito fora do campo verticalmente
 
+    targetY = Math.max(GOAL_TOP - 50, Math.min(targetY, GOAL_BOTTOM + 50));
     // Calcula a direção do chute (em direção ao gol adversário)
     const dx_target = targetX - bola.x;
     const dy_target = targetY - bola.y;
     const angle = Math.atan2(dy_target, dx_target);
 
-    const force = 18; // Força do chute do Bot
+    const force = 10; // Força do chute do Bot
 
     // Aplica o impulso
     bola.vx = Math.cos(angle) * force;
