@@ -1,7 +1,7 @@
 const WebSocket = require("ws");
-const http = require("http");
-const fs = require("fs"); // <--- MÓDULO NATIVO
-const path = require("path"); // <--- MÓDULO NATIVO
+const http = require = require("http");
+const fs = require("fs");
+const path = require("path");
 const { v4: uuidv4 } = require("uuid");
 
 // --- Configuração da Porta ---
@@ -50,7 +50,11 @@ const BOT_IDS = [
   "bot-player-002",
   "bot-player-003",
   "bot-player-004",
-]; // Máximo de 4 bots
+  "bot-player-005", // Aumentando para 5 IDs, apenas por segurança
+  "bot-player-006",
+  "bot-player-007",
+  "bot-player-008",
+];
 const MAX_BOTS = BOT_IDS.length;
 const MAX_TEAM_SIZE = 5; // O tamanho final desejado
 const MIDFIELD_X = WIDTH / 2; // 400
@@ -82,30 +86,31 @@ let bola = {
   lastTouchName: null,
 };
 
-// --- POSIÇÕES INICIAIS ATUALIZADAS PARA 5 JOGADORES ---
+// --- POSIÇÕES INICIAIS ATUALIZADAS PARA 5 JOGADORES (ZAGA, MEIO-CAMPO, ATAQUE) ---
+// Note que as posições já sugerem os papéis
 const team1Positions = [
-  { x: 100, y: 150 }, // Zagueiro A
-  { x: 100, y: 350 }, // Zagueiro B
-  { x: 250, y: 250 }, // Meio-campo Central
-  { x: 250, y: 100 }, // Lateral A
-  { x: 250, y: 400 }, // Lateral B
+  { x: 100, y: 250, role: "DEFENDER" }, // Zagueiro Central
+  { x: 180, y: 100, role: "DEFENDER" }, // Lateral A (Defensivo)
+  { x: 180, y: 400, role: "DEFENDER" }, // Lateral B (Defensivo)
+  { x: 300, y: 250, role: "MIDFIELD" }, // Meio-campo Armador
+  { x: 350, y: 150, role: "ATTACKER" }, // Atacante Ponta
 ];
 
 // Time 2 (Direita) - Posições espelhadas
 const team2Positions = [
-  { x: 700, y: 150 },
-  { x: 700, y: 350 },
-  { x: 550, y: 250 },
-  { x: 550, y: 100 },
-  { x: 550, y: 400 },
+  { x: 700, y: 250, role: "DEFENDER" },
+  { x: 620, y: 100, role: "DEFENDER" },
+  { x: 620, y: 400, role: "DEFENDER" },
+  { x: 500, y: 250, role: "MIDFIELD" },
+  { x: 450, y: 350, role: "ATTACKER" },
 ];
 // --- FIM POSIÇÕES INICIAIS ---
 
 let teamCount = { 1: 0, 2: 0 };
 const score = { 1: 0, 2: 0 };
 let gameTime = 180; // 3 minutos em segundos
-let isKickOffActive = false; // NOVO: Controla se o jogo está pausado para o Kick-Off
-let kickOffTeam = null; // NOVO: O time que fará a saída de bola (o time que sofreu o gol)
+let isKickOffActive = false; // Controla se o jogo está pausado para o Kick-Off
+let kickOffTeam = null; // O time que fará a saída de bola
 let gameInterval = null;
 
 // Atualiza física da bola a cada frame
@@ -124,7 +129,7 @@ setInterval(() => {
     bola.y = HEIGHT / 2;
     bola.vx = 0;
     bola.vy = 0;
-  } // ------------------------------------------------------------------ // NOVO: Colisão entre jogadores
+  } // ------------------------------------------------------------------ // Colisão entre jogadores
 
   handlePlayerCollisions(); // ------------------------------------------------------------------ // Colisão com a parede esquerda (FORA da área do gol)
   if (bola.x - bola.raio < 0 && (bola.y < GOAL_TOP || bola.y > GOAL_BOTTOM)) {
@@ -300,19 +305,20 @@ wss.on("connection", (ws) => {
         let initialPos; // Usa o time vindo do cliente (e corrigido acima)
 
         // --- Lógica de Posição Inicial de Novo Jogador Humano ---
-        const humanPlayersCount = Object.values(players).filter(p => !BOT_IDS.includes(p.id) && p.team === msg.player.team).length;
-        
+        // Conta apenas os jogadores *humanos* para determinar o próximo índice livre
+        const humanPlayersCount = Object.values(players).filter(
+          (p) => !BOT_IDS.includes(p.id) && p.team === msg.player.team
+        ).length;
+
+        // O índice é baseado no número de humanos. Bots ocuparão as vagas restantes (tratado no balanceTeams/resetAllPlayers)
+        const posIndex = humanPlayersCount % MAX_TEAM_SIZE;
+
         if (msg.player.team === 1) {
-          // O índice é baseado no número de humanos (já que os bots preenchem as vagas restantes)
-          const index = humanPlayersCount % team1Positions.length; 
-          initialPos = team1Positions[index] || { x: 150, y: 200 };
+          initialPos = team1Positions[posIndex] || { x: 150, y: 200 };
         } else {
-          const index = humanPlayersCount % team2Positions.length;
-          initialPos = team2Positions[index] || { x: 450, y: 200 };
+          initialPos = team2Positions[posIndex] || { x: 450, y: 200 };
         }
         // --- Fim Lógica Posição ---
-        
-        // *** CÓDIGO NOVO: ATRIBUIÇÃO DE NÚMERO ***
 
         const teamIdString = `team${msg.player.team}`;
         const playerNumber = assignUniquePlayerNumber(teamIdString);
@@ -323,6 +329,7 @@ wss.on("connection", (ws) => {
           team: msg.player.team,
           x: initialPos.x, // POSIÇÃO ATRIBUÍDA PELO SERVIDOR
           y: initialPos.y, // POSIÇÃO ATRIBUÍDA PELO SERVIDOR
+          role: "HUMAN",   // NOVO: Define o papel como humano
           number: playerNumber, // <--- ADICIONA O NÚMERO
         };
         console.log(
@@ -436,8 +443,8 @@ function resetBola() {
   bola.y = HEIGHT / 2;
   bola.vx = 0;
   bola.vy = 0;
-  bola.lastTouchId = null; // NOVO: Limpa o marcador
-  bola.lastTouchName = null; // NOVO: Limpa o marcador // broadcast do reset da bola para o cliente
+  bola.lastTouchId = null; // Limpa o marcador
+  bola.lastTouchName = null; // Limpa o marcador // broadcast do reset da bola para o cliente
   broadcast({ type: "update", bola });
 }
 
@@ -446,8 +453,8 @@ function restartGame() {
   score[1] = 0;
   score[2] = 0;
   gameTime = 180; // 3 minutos
-  isKickOffActive = false; // NOVO: Limpa o estado de Kick-off
-  kickOffTeam = null; // NOVO: Limpa o time da saída de bola // 2. Limpar e recriar o loop de tempo
+  isKickOffActive = false; // Limpa o estado de Kick-off
+  kickOffTeam = null; // Limpa o time da saída de bola // 2. Limpar e recriar o loop de tempo
 
   if (gameInterval) clearInterval(gameInterval);
   gameInterval = setInterval(() => {
@@ -455,37 +462,56 @@ function restartGame() {
       gameTime--;
       broadcast({ type: "update", gameTime });
     } else {
-      // NOVO: Checagem de fim de jogo por tempo (se não for 5x0)
+      // Checagem de fim de jogo por tempo (se não for 5x0)
       clearInterval(gameInterval);
       broadcast({ type: "gameOver", score });
     }
   }, 1000); // 3. Resetar a posição dos jogadores
 
-  resetAllPlayers(); // NOVO: Usando a nova função // 4. Resetar bola e notificar todos os clientes
+  resetAllPlayers(); // 4. Resetar bola e notificar todos os clientes
 
   resetBola();
   broadcast({ type: "gameRestarted", score });
 }
 
-// [AJUSTE] - Usa o módulo para circular entre as 5 posições definidas
+// [AJUSTE CRÍTICO] - Redefine a posição de TODOS os jogadores, humanos e bots.
 function resetAllPlayers() {
-  // Filtra e separa os jogadores de cada time
-  const team1Players = Object.values(players).filter((p) => p.team === 1);
-  const team2Players = Object.values(players).filter((p) => p.team === 2);
+  // 1. Separa os jogadores (garantindo a ordem de posições fixas)
+  const team1Humans = [];
+  const team1Bots = [];
+  const team2Humans = [];
+  const team2Bots = [];
 
-  // Reposiciona Time 1
+  for (const id in players) {
+    const p = players[id];
+    if (BOT_IDS.includes(id)) {
+      if (p.team === 1) team1Bots.push(p);
+      else if (p.team === 2) team2Bots.push(p);
+    } else {
+      if (p.team === 1) team1Humans.push(p);
+      else if (p.team === 2) team2Humans.push(p);
+    }
+  }
+
+  // 2. Reposiciona Time 1 (Humanos primeiro, depois Bots)
+  const team1Players = [...team1Humans, ...team1Bots];
   for (let i = 0; i < team1Players.length; i++) {
     const p = team1Players[i];
-    // Usa o módulo para circular entre as 5 posições.
-    const posIndex = i % team1Positions.length;
+    // Usa a posição fixa da formação
+    const posIndex = i % team1Positions.length; 
     const initialPos = team1Positions[posIndex];
 
     p.x = initialPos.x;
     p.y = initialPos.y;
+    // O Bot herda o papel da posição, se for um bot
+    if(BOT_IDS.includes(p.id)) {
+        p.role = initialPos.role;
+    }
     broadcast({ type: "playerUpdate", player: p });
   }
 
-  // Reposiciona Time 2
+  // 3. Reposiciona Time 2 (Humanos primeiro, depois Bots)
+  const team2Players = [...team2Humans, ...team2Bots];
   for (let i = 0; i < team2Players.length; i++) {
     const p = team2Players[i];
     const posIndex = i % team2Positions.length;
@@ -493,6 +519,10 @@ function resetAllPlayers() {
 
     p.x = initialPos.x;
     p.y = initialPos.y;
+    // O Bot herda o papel da posição, se for um bot
+    if(BOT_IDS.includes(p.id)) {
+        p.role = initialPos.role;
+    }
     broadcast({ type: "playerUpdate", player: p });
   }
 }
@@ -522,25 +552,31 @@ function releasePlayerNumber(teamId, number) {
   }
 }
 
+// [AJUSTE CRÍTICO] - Lógica de Posicionamento com base no Papel
 function calculateIdealBotPosition(bot, ball) {
   const playerRadius = PLAYER_RADIUS;
-  const isBotTeam1 = bot.team === 1; // Determina se a bola está no campo do BOT (DEFESA) ou no campo oposto (ATAQUE)
+  const isBotTeam1 = bot.team === 1;
+  const botRole = bot.role || "MIDFIELD"; // Garante um papel padrão
 
+  // Determina se a bola está no campo do BOT
   const isBallInBotSide = isBotTeam1
     ? ball.x <= MIDFIELD_X
     : ball.x >= MIDFIELD_X;
 
   let idealX;
   let idealY;
-  let xLimit;
 
-  if (isBallInBotSide) {
-    // === MODO ZAGUEIRO (DEFESA) ===
+  // -------------------------------------------------------------
+  // 1. Comportamento Defensivo (DEFENDER)
+  // -------------------------------------------------------------
+  if (botRole === "DEFENDER" || (botRole === "MIDFIELD" && isBallInBotSide)) {
     // Objetivo: Ficar entre a bola e o próprio gol.
-
     const goalX = isBotTeam1 ? 0 : WIDTH;
-    const goalY = HEIGHT / 2; // Distância que o Bot tenta manter-se entre a bola e o gol
-    const botDistanceToGoal = 150;
+    const goalY = HEIGHT / 2;
+
+    // Distância que o Bot tenta manter-se entre a bola e o gol.
+    // Defensor mais profundo: 150. Meio-campo defensivo: 250
+    const botDistanceToGoal = botRole === "DEFENDER" ? 150 : 250;
 
     const dxGoal = goalX - ball.x;
     const dyGoal = goalY - ball.y;
@@ -554,65 +590,149 @@ function calculateIdealBotPosition(bot, ball) {
       // Bola parada: volta para a posição defensiva centralizada
       idealX = isBotTeam1 ? WIDTH / 4 : (WIDTH * 3) / 4;
       idealY = HEIGHT / 2;
-    } // Limita a posição X ao próprio campo (defesa)
+    }
 
-    xLimit = isBotTeam1 ? MIDFIELD_X - playerRadius : MIDFIELD_X + playerRadius;
-    idealX = isBotTeam1 ? Math.min(idealX, xLimit) : Math.max(idealX, xLimit);
-  } else {
-    // === MODO ATACANTE (OFENSIVA) ===
-    // Objetivo: Ir atrás da bola no campo adversário.
+    // Garante que o defensor fique no campo defensivo (exceção para o meio-campo)
+    if (botRole === "DEFENDER") {
+      const maxDefensiveX = isBotTeam1
+        ? MIDFIELD_X - 50 
+        : MIDFIELD_X + 50; 
+      idealX = isBotTeam1 ? Math.min(idealX, maxDefensiveX) : Math.max(idealX, maxDefensiveX);
+    }
 
-    // O Bot persegue a bola no campo adversário (posição alvo é a própria bola)
+  // -------------------------------------------------------------
+  // 2. Comportamento Ofensivo (ATTACKER)
+  // -------------------------------------------------------------
+  } else if (botRole === "ATTACKER" || (botRole === "MIDFIELD" && !isBallInBotSide)) {
+    // Objetivo: Perseguir a bola e se posicionar para o ataque.
+    
+    // Atacante é mais agressivo, tenta sempre a bola
     idealX = ball.x;
-    idealY = ball.y; // Limita a posição X ao campo adversário (ataque)
+    idealY = ball.y;
 
-    xLimit = isBotTeam1 ? MIDFIELD_X + playerRadius : MIDFIELD_X - playerRadius;
-    idealX = isBotTeam1 ? Math.max(idealX, xLimit) : Math.min(idealX, xLimit); // Aplica uma margem de segurança para evitar que ele fique colado no gol adversário, atrapalhando a si mesmo
+    // Atacantes e Meias devem ir além do meio de campo
+    const minOffensiveX = isBotTeam1 
+      ? MIDFIELD_X + 50
+      : MIDFIELD_X - 50;
+    
+    idealX = isBotTeam1 ? Math.max(idealX, minOffensiveX) : Math.min(idealX, minOffensiveX);
 
+    // Aplica uma margem de segurança para evitar que ele fique colado no gol adversário
     const safeZoneX = isBotTeam1 ? WIDTH - 150 : 150;
     idealX = isBotTeam1
       ? Math.min(idealX, safeZoneX)
       : Math.max(idealX, safeZoneX);
-  } // 5. Aplica clamping de bordas (Garante que nunca saia do campo)
-
+  } 
+  // -------------------------------------------------------------
+  // 3. Se for Meio-Campo (e o código acima não cobriu), vai para o centro
+  // -------------------------------------------------------------
+  else {
+      // Meio-campo fica na posição de armação no meio, se a bola estiver muito longe.
+      idealX = isBotTeam1 ? MIDFIELD_X - 100 : MIDFIELD_X + 100;
+      idealY = HEIGHT / 2;
+  }
+  
+  // 4. Aplica clamping de bordas (Garante que nunca saia do campo)
   idealX = Math.max(playerRadius, Math.min(idealX, WIDTH - playerRadius));
   idealY = Math.max(playerRadius, Math.min(idealY, HEIGHT - playerRadius));
 
   return { x: idealX, y: idealY };
 }
 
+// [AJUSTE] - Prioriza o bot mais próximo para dar o Kick-Off
 function handleBotMovement(bot, bola) {
   // 1. LÓGICA DE KICK-OFF DO BOT
   if (isKickOffActive && bot.team === kickOffTeam) {
-    // Se o Bot for o time que tem que chutar, ele chuta imediatamente
-    const dx_kick = bola.x - bot.x;
-    const dy_kick = bola.y - bot.y;
-    const distToBall = Math.sqrt(dx_kick * dx_kick + dy_kick * dy_kick); // O Bot deve estar perto o suficiente
+    
+    // Encontra o bot mais próximo da bola (o que deve chutar)
+    let closestBot = null;
+    let minDist = Infinity;
+    
+    // Filtra apenas os bots do kickOffTeam
+    const botsInTeam = Object.values(players).filter(p => p.team === kickOffTeam && BOT_IDS.includes(p.id));
 
-    if (distToBall < 50) {
-      // Vira o Kick-Off para "inativo"
-      isKickOffActive = false;
-      kickOffTeam = null;
-      broadcast({ type: "kickOffStarted" }); // Notifica clientes para iniciar // Chuta em direção ao meio-campo para iniciar o jogo
-
-      const targetX = bot.team === 1 ? MIDFIELD_X + 50 : MIDFIELD_X - 50;
-      const targetY = HEIGHT / 2;
-
-      const dx_target = targetX - bola.x;
-      const dy_target = targetY - bola.y;
-      const angle = Math.atan2(dy_target, dx_target);
-      const force = 10; // Chute suave
-
-      bola.vx = Math.cos(angle) * force;
-      bola.vy = Math.sin(angle) * force;
-
-      bola.lastTouchId = bot.id;
-      bola.lastTouchName = bot.name;
-
-      return; // Sai da função, pois o Bot já deu o Kick-Off
+    for (const p of botsInTeam) {
+      const dist = Math.sqrt(Math.pow(bola.x - p.x, 2) + Math.pow(bola.y - p.y, 2));
+      if (dist < minDist) {
+        minDist = dist;
+        closestBot = p;
+      }
     }
-  } // 2. MOVIMENTO SUAVE (CORREÇÃO DO TREMOR)
 
+    // Se este bot não é o mais próximo, ele se move para sua posição inicial para não atrapalhar
+    if (closestBot && closestBot.id !== bot.id) {
+        // Encontra a posição inicial do bot (baseado no resetAllPlayers)
+        const teamPositions = bot.team === 1 ? team1Positions : team2Positions;
+        
+        // Encontra o índice da posição que ele deveria estar
+        const humanPlayersCount = Object.values(players).filter(p => !BOT_IDS.includes(p.id) && p.team === bot.team).length;
+        const botIndexInTeam = botsInTeam.findIndex(b => b.id === bot.id);
+        const posIndex = (humanPlayersCount + botIndexInTeam) % MAX_TEAM_SIZE;
+        
+        const initialPos = teamPositions[posIndex];
+        
+        // Move o bot para a posição inicial com velocidade BOT_SPEED
+        const dx_move = initialPos.x - bot.x;
+        const dy_move = initialPos.y - bot.y;
+        const distToInitial = Math.sqrt(dx_move * dx_move + dy_move * dy_move);
+
+        if (distToInitial > 1) {
+            const ratio = BOT_SPEED / distToInitial;
+            bot.x += dx_move * ratio;
+            bot.y += dy_move * ratio;
+        }
+
+        return; // Moveu para posição, não chuta
+    }
+    
+    // Se este bot É o mais próximo, move-se para a bola
+    if (closestBot && closestBot.id === bot.id) {
+        
+        const dx_move = bola.x - bot.x;
+        const dy_move = bola.y - bot.y;
+        const distToBall = Math.sqrt(dx_move * dx_move + dy_move * dy_move);
+
+        // Se o bot estiver perto o suficiente, ele chuta imediatamente
+        if (distToBall < 50) {
+            // Vira o Kick-Off para "inativo"
+            isKickOffActive = false;
+            kickOffTeam = null;
+            broadcast({ type: "kickOffStarted" }); // Notifica clientes para iniciar
+            
+            // Chuta em direção ao meio-campo adversário
+            const targetX = bot.team === 1 ? WIDTH * 0.75 : WIDTH * 0.25; 
+            const targetY = HEIGHT / 2;
+
+            const dx_target = targetX - bola.x;
+            const dy_target = targetY - bola.y;
+            const angle = Math.atan2(dy_target, dx_target);
+            const force = 10; // Chute suave
+
+            bola.vx = Math.cos(angle) * force;
+            bola.vy = Math.sin(angle) * force;
+
+            bola.lastTouchId = bot.id;
+            bola.lastTouchName = bot.name;
+
+            return; // Sai da função, Kick-Off realizado
+        }
+        
+        // Se o bot precisa se mover para a bola
+        if (distToBall > 1) {
+            const ratio = BOT_SPEED / distToBall;
+            bot.x += dx_move * ratio;
+            bot.y += dy_move * ratio;
+            
+            // Aplica clamping para garantir que o bot mais próximo chegue na bola
+            bot.x = Math.max(PLAYER_RADIUS, Math.min(bot.x, WIDTH - PLAYER_RADIUS));
+            bot.y = Math.max(PLAYER_RADIUS, Math.min(bot.y, HEIGHT - PLAYER_RADIUS));
+        }
+        
+        return; // Não executa o movimento/chute normal
+    }
+  } 
+  
+  // 2. MOVIMENTO SUAVE (CORREÇÃO DO TREMOR)
   const idealPos = calculateIdealBotPosition(bot, bola);
 
   let dx = idealPos.x - bot.x;
@@ -621,8 +741,7 @@ function handleBotMovement(bot, bola) {
 
   if (distToIdeal > 1) {
     dx = dx / distToIdeal;
-    dy = dy / distToIdeal; // NOVO CÓDIGO: Velocidade proporcional à distância (corrige o tremor) // O fator 0.8 aqui garante que ele desacelere ao se aproximar do alvo.
-
+    dy = dy / distToIdeal; // Velocidade proporcional à distância (corrige o tremor)
     const currentSpeed = Math.min(BOT_SPEED, distToIdeal * 0.8);
 
     bot.x += dx * currentSpeed;
@@ -630,21 +749,30 @@ function handleBotMovement(bot, bola) {
 
     bot.x = Math.max(PLAYER_RADIUS, Math.min(bot.x, WIDTH - PLAYER_RADIUS));
     bot.y = Math.max(PLAYER_RADIUS, Math.min(bot.y, HEIGHT - PLAYER_RADIUS));
-  } // 3. LÓGICA DE CHUTE (OFENSIVA/DEFENSIVA)
-
+  } 
+  
+  // 3. LÓGICA DE CHUTE (OFENSIVA/DEFENSIVA)
   const dx_kick = bola.x - bot.x;
   const dy_kick = bola.y - bot.y;
   const distToBall = Math.sqrt(dx_kick * dx_kick + dy_kick * dy_kick);
 
   if (distToBall < BOT_KICK_DISTANCE) {
     // O alvo do chute é o gol adversário (X=800 para Time 1, X=0 para Time 2)
-    const targetX = bot.team === 1 ? WIDTH : 0; // O alvo vertical padrão é o centro do gol (Y=250)
-    const centerGoalY = HEIGHT / 2; // --- NOVO: INTRODUZINDO O ERRO DE CHUTE --- // Gera um desvio aleatório entre -BOT_KICK_ERROR_MAX e +BOT_KICK_ERROR_MAX
+    const targetX = bot.team === 1 ? WIDTH : 0; 
+    const centerGoalY = HEIGHT / 2; 
 
-    const kickError = (Math.random() * 2 - 1) * BOT_KICK_ERROR_MAX;
-    let targetY = centerGoalY + kickError; // Opcional: Garante que o alvo não esteja muito fora do campo verticalmente
+    // Ajuste do erro de chute com base no papel
+    let errorFactor = 1;
+    if(bot.role === "DEFENDER") errorFactor = 1.5; // Zagueiro erra mais
+    if(bot.role === "MIDFIELD") errorFactor = 0.5; // Meio-campo chuta com mais precisão
+    if(bot.role === "ATTACKER") errorFactor = 0.8; // Atacante com erro moderado
 
-    targetY = Math.max(GOAL_TOP - 50, Math.min(targetY, GOAL_BOTTOM + 50)); // ------------------------------------------ // Calcula a direção do chute (em direção ao alvo imperfeito)
+    const kickError = (Math.random() * 2 - 1) * BOT_KICK_ERROR_MAX * errorFactor;
+    let targetY = centerGoalY + kickError; 
+
+    targetY = Math.max(GOAL_TOP - 50, Math.min(targetY, GOAL_BOTTOM + 50)); 
+    
+    // Calcula a direção do chute (em direção ao alvo imperfeito)
     const dx_target = targetX - bola.x;
     const dy_target = targetY - bola.y;
     const angle = Math.atan2(dy_target, dx_target);
@@ -659,85 +787,55 @@ function handleBotMovement(bot, bola) {
   }
 }
 
-// [SUBSTITUIÇÃO COMPLETA] - Lógica para garantir MAX_TEAM_SIZE
+// [SUBSTITUIÇÃO COMPLETA] - Lógica para garantir MAX_TEAM_SIZE (10 jogadores no total)
 function balanceTeams() {
   let humanCount = { 1: 0, 2: 0 };
-  let activeBotCount = { 1: 0, 2: 0 };
-  let playersToRemove = [];
-  let activeBotData = {}; // Para rastrear os times dos bots ativos
-
-  // 1. Contar Humanos e Bots e separar IDs
+  
+  // 1. Contar Humanos e Bots ativos para saber o que preencher
+  const activeBotIds = new Set();
   for (const id in players) {
     if (BOT_IDS.includes(id)) {
-      activeBotCount[players[id].team]++;
-      activeBotData[id] = players[id].team;
+      activeBotIds.add(id);
     } else {
       humanCount[players[id].team]++;
     }
   }
 
-  // 2. Calcular e identificar Bots para remoção
+  const availableBotIds = BOT_IDS.filter(id => !activeBotIds.has(id));
+  
+  // 2. Loop para balancear ambos os times
   for (let team = 1; team <= 2; team++) {
     const requiredBots = MAX_TEAM_SIZE - humanCount[team];
-    const currentBots = activeBotCount[team];
+    
+    // 3. Se houver Bots demais no time (Isso só aconteceria se um bot fosse adicionado por erro, 
+    // mas é bom ter uma verificação)
+    const currentBotsInTeam = Object.values(players).filter(p => p.team === team && BOT_IDS.includes(p.id)).length;
+    
+    if (currentBotsInTeam > requiredBots) {
+      // Remove o excesso (o último bot adicionado para simplificar)
+      const botToRemove = Object.values(players)
+        .filter(p => p.team === team && BOT_IDS.includes(p.id))
+        .pop();
 
-    // Se há Bots demais no time (excesso que precisa ser removido)
-    if (currentBots > requiredBots) {
-      // Identifica Bots no time para remoção (o excesso)
-      for (const botId of BOT_IDS) {
-            if (players[botId] && players[botId].team === team && playersToRemove.length < currentBots - requiredBots) {
-                playersToRemove.push(botId);
-            }
+      if (botToRemove) {
+        console.log(`[BOT] Removendo Bot ${botToRemove.id} do Time ${team} (Excesso).`);
+        delete players[botToRemove.id];
+        broadcast({ type: "playerLeft", playerId: botToRemove.id });
       }
     }
-  }
 
-  // 3. Remover Bots excessivos
-  playersToRemove.forEach((botId) => {
-    console.log(`[BOT] Removendo Bot ${botId}. Times balanceados.`);
-    delete players[botId];
-    broadcast({ type: "playerLeft", playerId: botId });
-  });
-
-  // 4. Adicionar/Mover Bots faltantes
-  let nextBotIdIndex = 0;
-  for (let team = 1; team <= 2; team++) {
-    const requiredBots = MAX_TEAM_SIZE - humanCount[team];
-    let botsToCreate = requiredBots;
-    
-    // Contar quantos bots DO TIME JÁ ESTÃO ATIVOS (que não foram removidos)
-    let activeBotsInTeam = 0;
-    for (const botId of BOT_IDS) {
-        if (players[botId] && players[botId].team === team) {
-            activeBotsInTeam++;
-        }
-    }
-    
-    botsToCreate = requiredBots - activeBotsInTeam;
+    // 4. Adicionar Bots faltantes
+    let botsToCreate = MAX_TEAM_SIZE - humanCount[team];
+    
+    // Subtrai os bots JÁ ATIVOS no time
+    botsToCreate -= Object.values(players).filter(p => p.team === team && BOT_IDS.includes(p.id)).length;
 
 
-    while (botsToCreate > 0 && nextBotIdIndex < MAX_BOTS) {
-      const botId = BOT_IDS[nextBotIdIndex];
-
-      // Se este ID de Bot já está ativo e no time correto (ou foi recém-removido, o que não deve acontecer aqui), pula
-      // Garantir que estamos pegando um BOT_ID que não está em uso, ou que está em uso no time errado
-      if (players[botId] && players[botId].team === team) {
-        nextBotIdIndex++;
-        continue;
-      }
-      
-      // Se o Bot está no time oposto, remove ele de lá para colocar no time atual
-      if (players[botId] && players[botId].team !== team) {
-          console.log(`[BOT] Movendo Bot ${botId} do Time ${players[botId].team} para o Time ${team}`);
-          delete players[botId]; // Remove temporariamente para recriar
-          broadcast({ type: "playerLeft", playerId: botId });
-      }
-
-      const BOT_NAME = team === 1 ? `RAFAEL-${nextBotIdIndex + 1}` : `MARCELAO-${nextBotIdIndex + 1}`;
-
-      // Calcula o índice da posição que este bot vai ocupar.
-      // É o número de humanos (humanCount[team]) mais o número de bots já ativos no time.
-      const initialPosIndex = humanCount[team] + (requiredBots - botsToCreate);
+    while (botsToCreate > 0 && availableBotIds.length > 0) {
+      const botId = availableBotIds.shift(); // Pega o próximo ID disponível
+      
+      // O índice de posição deve ser o próximo VAZIO, que é a contagem de humanos
+      const initialPosIndex = humanCount[team] + (MAX_TEAM_SIZE - requiredBots - botsToCreate); 
       
       const initialPosArray = team === 1 ? team1Positions : team2Positions;
       const initialPos = initialPosArray[initialPosIndex % initialPosArray.length];
@@ -747,24 +845,26 @@ function balanceTeams() {
         break;
       }
 
+      const BOT_NAME = team === 1 ? `RAFAEL-BOT-${botId.slice(-3)}` : `MARCELAO-BOT-${botId.slice(-3)}`;
+
       players[botId] = {
         id: botId,
         name: BOT_NAME,
         team: team,
         x: initialPos.x,
         y: initialPos.y,
-        number: 90 + nextBotIdIndex + 1, // Números altos para Bots (91, 92...)
+        role: initialPos.role, // NOVO: Atribui o papel da posição fixa
+        number: 90 + BOT_IDS.indexOf(botId) + 1, // Números altos para Bots (91, 92...)
       };
 
-      console.log(`[BOT] Criando Bot ${botId} para o Time ${team}`);
+      console.log(`[BOT] Adicionando Bot ${botId} (${initialPos.role}) no Time ${team}`);
       broadcast({ type: "newPlayer", player: players[botId] });
 
       botsToCreate--;
-      nextBotIdIndex++;
     }
   }
   
-  // Garante que todos os jogadores estão nas posições corretas após o balanceamento
+  // Garante que todos os jogadores estão nas posições corretas (incluindo as recém-criadas)
   resetAllPlayers();
 }
 
@@ -775,7 +875,7 @@ function handlePlayerCollisions() {
   const playerIds = Object.keys(players);
   const radius = PLAYER_RADIUS;
   const diameter = radius * 2;
-  const repulsionForce = 0.5; // Fator de força para afastar os jogadores // Itera sobre todos os pares de jogadores (evitando duplas e auto-colisão)
+  const repulsionForce = 0.5; // Fator de força para afastar os jogadores 
 
   for (let i = 0; i < playerIds.length; i++) {
     const p1 = players[playerIds[i]];
@@ -785,21 +885,21 @@ function handlePlayerCollisions() {
 
       const dx = p2.x - p1.x;
       const dy = p2.y - p1.y;
-      const dist = Math.sqrt(dx * dx + dy * dy); // Se a distância for menor que o diâmetro (eles estão se sobrepondo)
+      const dist = Math.sqrt(dx * dx + dy * dy); 
 
       if (dist < diameter && dist > 0) {
         const overlap = diameter - dist;
         const angle = Math.atan2(dy, dx);
         const sin = Math.sin(angle);
-        const cos = Math.cos(angle); // Distância a ser movida por cada jogador (metade da sobreposição)
+        const cos = Math.cos(angle); 
 
         const moveX = (cos * overlap) / 2;
-        const moveY = (sin * overlap) / 2; // 1. Reposiciona os jogadores
+        const moveY = (sin * overlap) / 2; 
 
         p1.x -= moveX;
         p1.y -= moveY;
         p2.x += moveX;
-        p2.y += moveY; // 2. (Opcional) Adiciona uma pequena força de repulsão // Como os jogadores não têm vetores de velocidade (vx/vy), // o movimento é puramente baseado no input. Aplicar a força // aqui apenas garante que eles se "soltem" mais facilmente. // Neste modelo, basta que o reposicionamento (1) seja feito // antes de processar o próximo input. // Notificamos os clientes sobre as novas posições corrigidas. // Isso é importante para que o cliente desenhe a posição final correta.
+        p2.y += moveY; 
 
         broadcast({ type: "playerUpdate", player: p1 });
         broadcast({ type: "playerUpdate", player: p2 });
@@ -809,4 +909,4 @@ function handlePlayerCollisions() {
 }
 // ------------------------------------------------------------------
 
-setInterval(balanceTeams, 5000);
+setInterval(balanceTeams, 5000); // Roda a cada 5 segundos
