@@ -13,8 +13,27 @@
       canvas {
         background: #0b572d;
         display: block;
-        margin: 20px auto;
+        /* Remover a margem automática superior/inferior, manter apenas a lateral */
+        margin: 0 auto;
         border: 2px solid white;
+      }
+
+      /* NOVO ESTILO: Contêiner principal para centralizar campo e painéis */
+      #gameContainer {
+        display: flex;
+        justify-content: center;
+        align-items: flex-start; /* Alinha o conteúdo ao topo do contêiner */
+        width: 100%;
+        max-width: 1200px; /* Limite a largura total para visualização em telas maiores */
+        margin: 20px auto;
+      }
+
+      /* NOVO ESTILO: Wrapper para o Canvas e o Placar/Tempo */
+      #canvasWrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin: 0 20px; /* Espaçamento entre o campo e os painéis laterais */
       }
 
       /* NOVO ESTILO: Animação de entrada para Game Over */
@@ -115,7 +134,7 @@
         font-weight: bold;
         text-shadow: 2px 2px 5px black;
         z-index: 10;
-        display: none; 
+        display: none;
         /* Inicia escondido */
 
         /* NOVAS PROPRIEDADES DE ANIMAÇÃO */
@@ -128,25 +147,26 @@
         animation-name: fade-zoom;
       }
 
+      /* REDUÇÃO DO PLACAR E TEMPO */
       .painel-placar {
-        /* Novo nome de classe/ID para o bloco central */
-        width: 200px;
+        width: 150px; /* Reduz a largura */
         text-align: center;
+        margin-bottom: 10px; /* Adiciona uma margem inferior para separar do canvas */
       }
 
       #time {
-        font-size: 1.8em; /* Aumenta um pouco */
+        font-size: 1.5em; /* Reduz a fonte do tempo */
         font-weight: 700;
-        color: #d0d0d0; /* Cor verde para o tempo (como um placar eletrônico) */
-        text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5); /* Sombra para destaque */
-        margin: 10px 0;
+        color: #d0d0d0;
+        text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
+        margin: 5px 0; /* Reduz a margem vertical */
       }
 
       #score {
-        font-size: 4em; /* Aumenta o placar */
-        font-weight: 900; /* Mais negrito */
+        font-size: 3em; /* Reduz a fonte do placar */
+        font-weight: 900;
         margin: 0;
-        letter-spacing: 5px; /* Espaçamento entre os números (ex: 1 X 0) */
+        letter-spacing: 5px;
       }
 
       /* NOVO ESTILO: Separador 'X' */
@@ -154,8 +174,9 @@
         font-size: 0.5em;
         font-weight: normal;
         color: #c6c209;
-        margin: 0 10px;
+        margin: 0 5px; /* Reduz a margem horizontal do X */
       }
+      /* FIM DA REDUÇÃO */
 
       #status {
         margin-top: 5px;
@@ -164,11 +185,14 @@
 
       /* Estilo para o painel de time base */
       .teamPanel {
-        width: 180px;
+        width: 180px; /* Largura padrão */
         background: #d9dcdf;
         padding: 10px;
-        border-radius: 8px; /* Borda mais suave */
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* Sombra suave */
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        /* Alinhar o painel à altura do topo do canvas */
+        align-self: flex-start; 
+        margin-top: 2px; /* Ajuste fino para alinhar com a borda do canvas */
       }
 
       /* Estilo para o cabeçalho do time */
@@ -176,13 +200,13 @@
         margin-top: 0;
         margin-bottom: 5px;
         padding-bottom: 5px;
-        border-bottom: 2px solid; /* Linha de separação */
+        border-bottom: 2px solid;
         font-size: 1.2em;
       }
 
       /* Cores específicas e bordas para o VITÓRIA */
       #team1Panel {
-        border-left: 5px solid #9e0101; /* Borda lateral vermelha */
+        border-left: 5px solid #9e0101;
         text-align: left;
       }
       #team1Panel h3 {
@@ -192,7 +216,7 @@
 
       /* Cores específicas e bordas para o BAHIA */
       #team2Panel {
-        border-right: 5px solid #2e30eb; /* Borda lateral azul */
+        border-right: 5px solid #2e30eb;
         text-align: right;
       }
       #team2Panel h3 {
@@ -217,7 +241,22 @@
       }
 
       /* Regra para EXIBIR os controles SÓ EM TELAS PEQUENAS (Celulares) */
-      @media (max-width: 850px) {
+      @media (max-width: 950px) {
+        #gameContainer {
+            flex-direction: column; /* Empilha o canvas e os painéis verticalmente */
+            align-items: center;
+        }
+        
+        #team1Panel, #team2Panel {
+            margin-bottom: 15px; /* Adiciona espaçamento entre os painéis e o canvas */
+            width: 80%;
+            max-width: 380px;
+        }
+        
+        #canvasWrapper {
+             margin: 0; /* Remove a margem lateral */
+        }
+
         #touchControls {
           position: fixed;
           bottom: 0;
@@ -273,14 +312,7 @@
   <body>
     <h2>🏆 BAVI ONLINE 🏆</h2>
 
-    <div
-      style="
-        display: flex;
-        justify-content: space-around;
-        width: 800px;
-        margin: 0 auto;
-      "
-    >
+    <div id="gameContainer">
       <div id="team1Panel" class="teamPanel">
         <h3>EC VITÓRIA</h3>
         <ul id="team1List">
@@ -288,10 +320,16 @@
         </ul>
       </div>
 
-      <div class="painel-placar">
-        <p id="time">03:00</p>
-        <p id="score">0 <span class="score-separator">x</span> 0</p>
-        <p id="status">Conectando...</p>
+      <div id="canvasWrapper">
+        <div class="painel-placar">
+          <p id="time">03:00</p>
+          <p id="score">0 <span class="score-separator">x</span> 0</p>
+          <p id="status">Conectando...</p>
+        </div>
+
+        <div id="eventMessage"></div>
+
+        <canvas id="game" width="800" height="500"></canvas>
       </div>
 
       <div id="team2Panel" class="teamPanel">
@@ -302,11 +340,7 @@
       </div>
     </div>
 
-    <div
-      id="eventMessage"></div>
-
-    <div
-      id="gameOverScreen">
+    <div id="gameOverScreen">
       <h1 id="winnerMessage" style="font-size: 4em"></h1>
       <button
         id="restartButton"
@@ -334,8 +368,6 @@
       <button id="kick-btn" class="action-btn">CHUTE</button>
     </div>
 
-        <canvas id="game" width="800" height="500"></canvas>
-
     <script>
       //const ws = new WebSocket("ws://10.60.0.99:8080"); // IP do host
       const ws = new WebSocket("wss://bavi-online.onrender.com"); // Para testes locais
@@ -351,8 +383,8 @@
       const team1List = document.getElementById("team1List");
       const team2List = document.getElementById("team2List");
 
-      const WIDTH = canvas.width; // 600
-      const HEIGHT = canvas.height; // 400
+      const WIDTH = canvas.width; // 800
+      const HEIGHT = canvas.height; // 500
 
       let playerId = null;
       let players = {};
@@ -363,19 +395,6 @@
       let gameTime = 180;
       let isKickOffActive = false;
       let kickOffTeam = null;
-
-      // let teamCount = { 1: 0, 2: 0 };
-      // const team1Positions = [
-      //   { x: 100, y: 100 },
-      //   { x: 100, y: 200 },
-      //   { x: 100, y: 300 },
-      // ];
-      // const team2Positions = [
-      //   { x: 500, y: 100 },
-      //   { x: 500, y: 200 },
-      //   { x: 500, y: 300 },
-      // ];
-      // index.html: Adicione esta função, substituindo promptName()
 
       function promptTeamAndName() {
         let playerName = null;
@@ -424,12 +443,6 @@
 
         return { name: playerName, team: playerTeam };
       }
-
-      // function assignPosition(player) {
-      //   if (player.team === 1)
-      //     Object.assign(player, team1Positions[teamCount[1]++]);
-      //   else Object.assign(player, team2Positions[teamCount[2]++]);
-      // }
 
       function drawField() {
         // Constantes de dimensão (mantidas)
@@ -505,21 +518,28 @@
         for (let id in players) {
           const p = players[id];
           const playerRadius = 15; // Raio do jogador
-          const borderWidth = 3; // Largura da borda // Cor do time 1 (Vermelho) e time 2 (Azul) // Cores base para o preenchimento do botão
+          const borderWidth = 3; // Largura da borda 
+          // Cor do time 1 (Vermelho) e time 2 (Azul) 
+          // Cores base para o preenchimento do botão
 
-          const teamPrimaryColor = p.team === 1 ? "#c11717" : "#2e30eb"; // Vermelho para Vitória, Azul para Bahia // Cor da borda externa do jogador // Para o Time 1, mantém preta. Para o Time 2, será branca.
+          const teamPrimaryColor = p.team === 1 ? "#c11717" : "#2e30eb"; // Vermelho para Vitória, Azul para Bahia 
+          // Cor da borda externa do jogador 
+          // Para o Time 1, mantém preta. Para o Time 2, será branca.
 
-          const playerBorderColor = p.team === 1 ? "black" : "white"; // Cor da linha horizontal (agora não usaremos mais a "linha" como uma borda interna) // Removemos esta variável se não for mais usada para a faixa central, // mas a deixarei aqui caso queira usá-la em algum outro detalhe. // const playerLineColor = p.team === 1 ? "black" : "#c11717"; // 1. Desenha a borda externa do jogador (círculo maior)
+          const playerBorderColor = p.team === 1 ? "black" : "white"; 
+          // 1. Desenha a borda externa do jogador (círculo maior)
 
           ctx.fillStyle = playerBorderColor;
           ctx.beginPath();
           ctx.arc(p.x, p.y, playerRadius + borderWidth, 0, Math.PI * 2);
-          ctx.fill(); // 2. Desenha o jogador (círculo principal - cor primária do time)
+          ctx.fill(); 
+          // 2. Desenha o jogador (círculo principal - cor primária do time)
 
           ctx.fillStyle = teamPrimaryColor; // Cor primária (vermelho ou azul)
           ctx.beginPath();
           ctx.arc(p.x, p.y, playerRadius, 0, Math.PI * 2);
-          ctx.fill(); // 3. Desenha a linha horizontal para o Time 1 OU a faixa para o Time 2
+          ctx.fill(); 
+          // 3. Desenha a linha horizontal para o Time 1 OU a faixa para o Time 2
 
           if (p.team === 1) {
             // Time 1: Linha preta simples
@@ -535,8 +555,8 @@
               bandWidth,
               playerRadius * 2
             );
-          } // 4. Desenha o número com contorno (já alterado na instrução anterior)
-
+          } 
+          // 4. Desenha o número com contorno
           if (p.number) {
             ctx.font = "bold 14px Arial";
             ctx.textAlign = "center";
@@ -550,7 +570,8 @@
 
             ctx.fillStyle = p.team === 1 ? "yellow" : "white"; // Amarelo para Time 1, Branco para Time 2
             ctx.fillText(text, p.x, p.y);
-          } // 5. Desenha o nome do jogador (sem alterações)
+          } 
+          // 5. Desenha o nome do jogador
           ctx.fillStyle = "white";
           ctx.font = "14px Arial";
           ctx.textAlign = "center";
@@ -597,7 +618,7 @@
 
           const playerNumber = p.number ? `(${p.number}) ` : "";
           // Adiciona um indicador 'VOCÊ' se for o jogador local
-          const nameDisplay = p.name + (id === playerId ? " (VOCÊ)" : "");
+          const nameDisplay = playerNumber + p.name + (id === playerId ? " (VOCÊ)" : "");
 
           if (p.team === 1) {
             team1Players.push(nameDisplay);
