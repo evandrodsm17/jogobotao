@@ -1,718 +1,202 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+   
   <head>
+       
     <meta charset="UTF-8" />
+    <link rel="stylesheet" href="style.css" />
+       
     <title>Jogo de Botão LAN</title>
-    <style>
-      /* ----------------- ESTILOS ORIGINAIS (mantidos) ----------------- */
-      body {
-        background: #292a2a;
-        color: white;
-        font-family: sans-serif;
-        text-align: center;
-      }
-      canvas {
-        background: #0b572d;
-        display: block;
-        margin: 0 20px; /* Adiciona margem lateral para separar dos painéis */
-        border: 2px solid white;
-      }
-
-      .score-separator {
-        font-size: 0.2em;
-        font-weight: normal;
-        color: #c6c209;
-        margin: 0 5px;
-      }
-
-      /* NOVO ESTILO: Contêiner principal para centralizar campo e painéis laterais */
-      #gameContainer {
-        display: flex;
-        justify-content: center;
-        align-items: flex-start; /* Alinha o conteúdo ao topo do contêiner */
-        width: 100%;
-        max-width: 1200px;
-        margin: 10px auto; /* Reduz margem superior para o placar */
-      }
-
-      /* ESTILO DO PLACAR (AGORA NO TOPO) */
-      .painel-placar-topo {
-        /* Estilos para o bloco centralizado no topo */
-        width: 250px;
-        margin: 10px auto; /* Centraliza o placar sob o título */
-        text-align: center;
-        /* Adiciona um background sutil para destaque se desejar */
-        background: #1c1c1c;
-        padding: 5px 0;
-        border-radius: 5px;
-      }
-
-      /* ========================================================== */
-      /* NOVO ESTILO: Configuração Inicial */
-      /* ========================================================== */
-
-      #initialSetupScreen {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.9);
-        display: none; /* Começa escondido */
-        justify-content: center;
-        align-items: center;
-        flex-direction: column;
-        z-index: 30; /* Acima de tudo */
-        padding: 20px;
-        box-sizing: border-box;
-      }
-
-      #setupContent {
-        background: #3a3a3a;
-        padding: 30px;
-        border-radius: 10px;
-        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
-        max-width: 500px;
-        width: 90%;
-      }
-
-      #playerNameInput {
-        width: 100%;
-        padding: 10px;
-        margin-bottom: 20px;
-        border: 2px solid #555;
-        border-radius: 5px;
-        font-size: 1.2em;
-        box-sizing: border-box;
-      }
-
-      #teamSelection {
-        display: flex;
-        justify-content: space-around;
-        gap: 15px;
-        margin-bottom: 25px;
-      }
-
-      .teamCard {
-        flex: 1;
-        padding: 15px;
-        border: 3px solid #555;
-        border-radius: 8px;
-        cursor: pointer;
-        transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
-        text-align: center;
-      }
-
-      .teamCard.team1 {
-        background: #9e0101; /* Vermelho Vitória */
-        color: white;
-      }
-
-      .teamCard.team2 {
-        background: #2e30eb; /* Azul Bahia */
-        color: white;
-      }
-
-      .teamCard:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
-      }
-
-      .teamCard.selected {
-        border-color: yellow; /* Amarelo de destaque */
-        box-shadow: 0 0 5px yellow;
-        transform: scale(1.05);
-      }
-      .teamCard.selected h4 {
-        text-shadow: 1px 1px 3px black;
-      }
-
-      #connectButton {
-        width: 100%;
-        padding: 15px;
-        font-size: 1.4em;
-        font-weight: bold;
-        background: #4caf50;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        transition: background 0.3s;
-      }
-
-      #connectButton:hover {
-        background: #66bb6a;
-      }
-
-      /* ========================================================== */
-      /* ESTILOS EXISTENTES (Game Over, Mensagem de Evento, etc.) */
-      /* ========================================================== */
-
-      /* NOVO ESTILO: Animação de entrada para Game Over */
-      @keyframes slide-in-fade {
-        0% {
-          opacity: 0;
-          transform: translate(-50%, -100%);
-        } /* Começa acima e invisível */
-        100% {
-          opacity: 1;
-          transform: translate(-50%, -50%);
-        } /* Desliza para o centro e fica visível */
-      }
-
-      #gameOverScreen {
-        position: fixed; /* Use fixed para cobrir toda a viewport */
-        top: 50%; /* Centraliza verticalmente */
-        left: 50%; /* Centraliza horizontalmente */
-        transform: translate(-50%, -50%); /* Ajuste fino de centralização */
-        width: 100%;
-        height: 100%;
-        /* Gradiente suave de fundo */
-        background: linear-gradient(
-          45deg,
-          rgba(0, 0, 0, 0.9),
-          rgba(50, 0, 0, 0.8)
-        );
-        color: white;
-        display: none;
-        justify-content: center;
-        align-items: center;
-        flex-direction: column;
-        z-index: 20;
-
-        /* Propriedades da animação */
-        animation-duration: 0.8s; /* Duração da animação de entrada */
-        animation-timing-function: ease-out; /* Suavidade da animação */
-        animation-fill-mode: forwards; /* Mantém o estado final da animação */
-      }
-
-      /* Classe para ativar a animação de entrada */
-      .game-over-active {
-        animation-name: slide-in-fade;
-      }
-
-      #winnerMessage {
-        font-size: 4em;
-        text-shadow: 3px 3px 8px rgba(0, 0, 0, 0.7); /* Sombra mais forte */
-        margin-bottom: 20px;
-      }
-
-      #restartButton {
-        padding: 15px 35px; /* Aumenta um pouco */
-        font-size: 1.6em;
-        margin-top: 30px;
-        cursor: pointer;
-        background: #4caf50; /* Verde vibrante */
-        color: white;
-        border: none;
-        border-radius: 8px;
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
-        transition: background 0.3s ease, transform 0.2s ease; /* Transição suave */
-      }
-
-      #restartButton:hover {
-        background: #66bb6a; /* Cor mais clara ao passar o mouse */
-        transform: translateY(-2px); /* Efeito de "levantar" */
-      }
-
-      /* NOVO ESTILO: Animação para mensagens de evento */
-      @keyframes fade-zoom {
-        0% {
-          opacity: 0;
-          transform: translate(-50%, -20px) scale(0.8);
-        }
-        10% {
-          opacity: 1;
-          transform: translate(-50%, 0px) scale(1);
-        }
-        90% {
-          opacity: 1;
-          transform: translate(-50%, 0px) scale(1);
-        }
-        100% {
-          opacity: 0;
-          transform: translate(-50%, -20px) scale(0.8);
-        }
-      }
-
-      #eventMessage {
-        /* Estilos existentes */
-        /* Posição no campo */
-        position: absolute;
-        top: 250px; /* Ajusta a posição vertical dentro do campo (50% de 500px + topo do campo) */
-        left: 50%;
-        transform: translateX(-50%); /* Garante centralização inicial */
-        color: yellow;
-        font-size: 2.5em;
-        font-weight: bold;
-        text-shadow: 2px 2px 5px black;
-        z-index: 10;
-        display: none;
-        /* Inicia escondido */
-
-        /* NOVAS PROPRIEDADES DE ANIMAÇÃO */
-        animation-duration: 4s;
-        animation-fill-mode: forwards;
-      }
-
-      /* Classe para ativar a animação */
-      .event-message-active {
-        animation-name: fade-zoom;
-      }
-
-      /* Placar e tempo (topo) */
-      #time {
-        font-size: 1.1em; /* Mantém reduzido */
-        font-weight: 700;
-        color: #ebf30c;
-        text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
-        margin: 5px 0; /* Mantém a margem reduzida */
-      }
-
-      #score {
-        font-size: 2em; /* Mantém reduzido */
-        font-weight: 600;
-        margin: 0;
-        letter-spacing: 5px;
-      }
-
-      /* Separador 'X' */
-      #score span {
-        font-size: 0.2em;
-        font-weight: normal;
-        color: #c6c209;
-        margin: 0 5px;
-      }
-
-      #status {
-        margin-top: 10px;
-        color: #02a855;
-      }
-
-      /* Estilo para o painel de time base */
-      .teamPanel {
-        width: 240px; /* Largura padrão */
-        background: #d9dcdf;
-        padding: 10px;
-        border-radius: 8px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-        align-self: flex-start; /* Alinha ao topo do contêiner flex (gameContainer) */
-        margin-top: 2px; /* Pequeno ajuste de alinhamento com o canvas */
-      }
-
-      /* Estilo para o cabeçalho do time */
-      .teamPanel h3 {
-        margin-top: 0;
-        margin-bottom: 5px;
-        padding-bottom: 5px;
-        border-bottom: 2px solid;
-        font-size: 1.2em;
-      }
-
-      /* Cores específicas e bordas para o VITÓRIA */
-      #team1Panel {
-        border-left: 5px solid #9e0101;
-        text-align: left;
-      }
-      #team1Panel h3 {
-        color: #101010;
-        border-color: #9e0101;
-      }
-
-      /* Cores específicas e bordas para o BAHIA */
-      #team2Panel {
-        border-right: 5px solid #2e30eb;
-        text-align: right;
-      }
-      #team2Panel h3 {
-        color: #9e0101;
-        border-color: #2e30eb;
-      }
-
-      /* Lista de jogadores */
-      .teamPanel ul {
-        list-style: none;
-        padding: 0;
-        font-size: 0.8em;
-        color: #171616;
-      }
-      .teamPanel li {
-        padding: 2px 0;
-      }
-
-      #touchControls {
-        /* Esconde os controles por padrão em telas grandes (PC) */
-        display: none;
-      }
-
-      /* O Canvas precisa de position: relative para que o #eventMessage seja posicionado corretamente em relação a ele. */
-      #game {
-        position: relative;
-      }
-
-      /* Regra para EXIBIR os controles SÓ EM TELAS PEQUENAS (Celulares) */
-      @media (max-width: 950px) {
-        #gameContainer {
-          flex-direction: column; /* Empilha o canvas e os painéis verticalmente */
-          align-items: center;
-        }
-
-        .painel-placar-topo {
-          margin: 10px auto 0; /* Garante que fique no topo e centralizado */
-        }
-
-        #team1Panel,
-        #team2Panel {
-          margin-bottom: 15px; /* Adiciona espaçamento entre os painéis e o canvas */
-          width: 80%;
-          max-width: 380px;
-        }
-
-        #game {
-          margin: 10px auto; /* Garante que o canvas fique centralizado */
-        }
-
-        #eventMessage {
-          /* Ajusta a posição vertical da mensagem em telas pequenas (campo com 500px de altura) */
-          top: 250px;
-        }
-
-        /* Estilos de controle de toque... (mantidos do seu código) */
-        #touchControls {
-          position: fixed;
-          bottom: 0;
-          left: 0;
-          width: 100%;
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-end;
-          padding: 15px;
-          box-sizing: border-box;
-          pointer-events: none;
-        }
-
-        .dpad-btn,
-        .action-btn {
-          pointer-events: auto;
-          background: rgba(0, 0, 0, 0.7);
-          color: white;
-          border: 2px solid white;
-          border-radius: 10px;
-          font-size: 1.2em;
-          cursor: pointer;
-          margin: 5px;
-          user-select: none;
-          -webkit-user-select: none;
-          touch-action: manipulation;
-        }
-
-        #dpad {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-        }
-
-        .dpad-btn {
-          width: 50px;
-          height: 50px;
-          font-size: 20px;
-        }
-
-        #kick-btn {
-          width: 120px;
-          height: 60px;
-          margin-bottom: 25px;
-          font-weight: bold;
-        }
-      }
-
-      /* ----------------- ESTILOS ADICIONAIS/ENHANCED PARA GOL (são adicionados depois para sobrepor) ----------------- */
-
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
-
-      /* subtis ajustes visuais globais (não alteram a lógica original) */
-      body {
-        background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
-        min-height: 100vh;
-        overflow-x: hidden;
-      }
-
-      canvas {
-        background: linear-gradient(45deg, #0b572d, #0d6e35, #0f8540);
-        border-radius: 12px;
-        box-shadow: 0 0 30px rgba(0, 255, 0, 0.12);
-      }
-
-      /* Overlay de vídeo para gol - AUMENTADO */
-      #goalVideoOverlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: radial-gradient(circle, rgba(255, 215, 0, 0.18), rgba(0, 0, 0, 0.95));
-        display: none;
-        justify-content: center;
-        align-items: center;
-        z-index: 100;
-        animation: goalOverlayIn 0.5s ease-in-out;
-        pointer-events: none;
-      }
-
-      #goalVideo {
-        max-width: 90%;
-        max-height: 90%;
-        border-radius: 20px;
-        box-shadow: 0 0 80px rgba(255, 215, 0, 1), 0 0 120px rgba(255, 107, 53, 0.8);
-        border: 3px solid #ffd700;
-      }
-
-      #goalImage {
-        max-width: 70%;
-        max-height: 70%;
-        border-radius: 20px;
-        box-shadow: 0 0 80px rgba(255, 215, 0, 1), 0 0 120px rgba(255, 107, 53, 0.8);
-        border: 3px solid #ffd700;
-        animation: goalImagePulse 0.8s infinite alternate;
-        display: none;
-      }
-
-      @keyframes goalOverlayIn {
-        from {
-          opacity: 0;
-          transform: scale(0.8);
-        }
-        to {
-          opacity: 1;
-          transform: scale(1);
-        }
-      }
-
-      @keyframes goalImagePulse {
-        0% {
-          transform: scale(1);
-          filter: brightness(1);
-        }
-        100% {
-          transform: scale(1.05);
-          filter: brightness(1.2);
-        }
-      }
-
-      .fade-out {
-        animation: fadeOut 0.5s ease-in-out;
-      }
-
-      /* Texto de GOL aumentado */
-      #goalText {
-        position: absolute;
-        top: 10%;
-        left: 50%;
-        transform: translateX(-50%);
-        font-size: 6em;
-        font-weight: 900;
-        color: #ffd700;
-        text-shadow:
-          0 0 30px rgba(255, 215, 0, 1),
-          0 0 60px rgba(255, 107, 53, 0.8),
-          3px 3px 0px #ff6b35,
-          -3px -3px 0px #f7931e;
-        z-index: 101;
-        animation: goalTextBounce 0.6s ease-out;
-        font-family: 'Arial Black', Arial, sans-serif;
-        display: none;
-        pointer-events: none;
-      }
-
-      @keyframes goalTextBounce {
-        0% {
-          transform: translateX(-50%) scale(0);
-          opacity: 0;
-        }
-        50% {
-          transform: translateX(-50%) scale(1.3);
-          opacity: 1;
-        }
-        100% {
-          transform: translateX(-50%) scale(1);
-          opacity: 1;
-        }
-      }
-
-      /* Animação para mensagens de evento - AUMENTADA */
-      @keyframes fade-zoom {
-        0% {
-          opacity: 0;
-          transform: translate(-50%, -20px) scale(0.8);
-        }
-        10% {
-          opacity: 1;
-          transform: translate(-50%, 0px) scale(1.1);
-        }
-        90% {
-          opacity: 1;
-          transform: translate(-50%, 0px) scale(1.1);
-        }
-        100% {
-          opacity: 0;
-          transform: translate(-50%, -20px) scale(0.8);
-        }
-      }
-
-      #eventMessage {
-        position: absolute;
-        top: 120px;
-        left: 50%;
-        transform: translateX(-50%);
-        color: #ffd700;
-        font-size: 3.5em;
-        font-weight: 900;
-        text-shadow:
-          0 0 25px rgba(255, 215, 0, 1),
-          0 0 50px rgba(255, 107, 53, 0.8),
-          2px 2px 0px #ff6b35,
-          -2px -2px 0px #f7931e;
-        z-index: 15;
-        display: none;
-        animation-duration: 4s;
-        animation-fill-mode: forwards;
-        font-family: 'Arial Black', Arial, sans-serif;
-      }
-
-      .event-message-active {
-        animation-name: fade-zoom;
-      }
-
-      /* Efeitos de partículas para gol - MELHORADOS */
-      @keyframes goalParticles {
-        0% {
-          opacity: 1;
-          transform: scale(0) rotate(0deg);
-        }
-        25% {
-          opacity: 1;
-          transform: scale(1.5) rotate(90deg);
-        }
-        50% {
-          opacity: 0.9;
-          transform: scale(2) rotate(180deg);
-        }
-        75% {
-          opacity: 0.6;
-          transform: scale(2.5) rotate(270deg);
-        }
-        100% {
-          opacity: 0;
-          transform: scale(3) rotate(360deg);
-        }
-      }
-
-      .goal-particle {
-        position: absolute;
-        width: 15px;
-        height: 15px;
-        background: #ffd700;
-        border-radius: 50%;
-        pointer-events: none;
-        animation: goalParticles 3s ease-out forwards;
-        box-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
-      }
-
-      /* Fogos de artifício para gol */
-      @keyframes firework {
-        0% {
-          opacity: 1;
-          transform: scale(0);
-        }
-        50% {
-          opacity: 1;
-          transform: scale(1.2);
-        }
-        100% {
-          opacity: 0;
-          transform: scale(2);
-        }
-      }
-
-      .firework {
-        position: absolute;
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        animation: firework 1.5s ease-out forwards;
-      }
-
-      /* Responsividade dos painéis e touch (mantidos/ajustados) */
-      @media (max-width: 850px) {
-        #touchControls {
-          position: fixed;
-          bottom: 0;
-          left: 0;
-          width: 100%;
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-end;
-          padding: 20px;
-          box-sizing: border-box;
-          pointer-events: none;
-        }
-
-        .dpad-btn,
-        .action-btn {
-          pointer-events: auto;
-          background: linear-gradient(135deg, rgba(0, 0, 0, 0.8), rgba(50, 50, 50, 0.8));
-          color: white;
-          border: 2px solid rgba(255, 255, 255, 0.3);
-          border-radius: 15px;
-          font-size: 1.3em;
-          cursor: pointer;
-          margin: 5px;
-          user-select: none;
-          -webkit-user-select: none;
-          touch-action: manipulation;
-          transition: all 0.3s ease;
-          backdrop-filter: blur(10px);
-        }
-      }
-    </style>
+       
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+     
   </head>
 
+   
   <body>
-    <!-- Placar topo (mantido) -->
+           
     <div class="painel-placar-topo">
+           
       <p id="time">03:00</p>
+           
       <p id="score">0 <span class="score-separator">x</span> 0</p>
+           
       <p id="status">Conectando...</p>
+         
     </div>
 
+    <div
+      id="host-controls"
+      style="
+        display: none;
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        background: rgba(0, 0, 0, 0.9);
+        padding: 10px;
+        border-radius: 5px;
+        color: white;
+        z-index: 1000;
+        border: 2px solid gold;
+      "
+    >
+      <h3>⭐ Host Manager</h3>
+      <p id="game-status-display" style="color: gold; font-weight: bold">
+        Status: Aguardando partida...
+      </p>
+      <button
+        onclick="startGameClient()"
+        style="
+          background: #4caf50;
+          color: white;
+          border: none;
+          padding: 5px 10px;
+          margin-bottom: 8px;
+          cursor: pointer;
+        "
+      >
+        Iniciar / Continuar Jogo
+      </button>
+      <button
+        onclick="restartGameClient()"
+        style="
+          background: #f44336;
+          color: white;
+          border: none;
+          padding: 5px 10px;
+          margin-bottom: 8px;
+          cursor: pointer;
+        "
+      >
+        Reiniciar Partida
+      </button>
+
+      <h4>Gerenciar Bots (MAX 3/Time)</h4>
+
+      <div
+        style="
+          margin-bottom: 5px;
+          border-left: 3px solid #c11717;
+          padding-left: 5px;
+        "
+      >
+        <strong style="color: #c11717">Time 1 (VITÓRIA)</strong>:
+        <br />
+        <button onclick="addBotClient(1, 'DEFENDER')" style="font-size: 10px">
+          + DEF
+        </button>
+        <button onclick="addBotClient(1, 'MIDFIELD')" style="font-size: 10px">
+          + MID
+        </button>
+        <button onclick="addBotClient(1, 'ATTACKER')" style="font-size: 10px">
+          + ATT
+        </button>
+        <br />
+        <button
+          onclick="removeBotClient(1, 'DEFENDER')"
+          style="margin-top: 3px; font-size: 10px"
+        >
+          - DEF
+        </button>
+        <button
+          onclick="removeBotClient(1, 'MIDFIELD')"
+          style="font-size: 10px"
+        >
+          - MID
+        </button>
+        <button
+          onclick="removeBotClient(1, 'ATTACKER')"
+          style="font-size: 10px"
+        >
+          - ATT
+        </button>
+      </div>
+
+      <hr style="border-color: #555" />
+
+      <div
+        style="
+          margin-bottom: 5px;
+          border-left: 3px solid #2e30eb;
+          padding-left: 5px;
+        "
+      >
+        <strong style="color: #2e30eb">Time 2 (BAHIA)</strong>:
+        <br />
+        <button onclick="addBotClient(2, 'DEFENDER')" style="font-size: 10px">
+          + DEF
+        </button>
+        <button onclick="addBotClient(2, 'MIDFIELD')" style="font-size: 10px">
+          + MID
+        </button>
+        <button onclick="addBotClient(2, 'ATTACKER')" style="font-size: 10px">
+          + ATT
+        </button>
+        <br />
+        <button
+          onclick="removeBotClient(2, 'DEFENDER')"
+          style="margin-top: 3px; font-size: 10px"
+        >
+          - DEF
+        </button>
+        <button
+          onclick="removeBotClient(2, 'MIDFIELD')"
+          style="font-size: 10px"
+        >
+          - MID
+        </button>
+        <button
+          onclick="removeBotClient(2, 'ATTACKER')"
+          style="font-size: 10px"
+        >
+          - ATT
+        </button>
+      </div>
+    </div>
+       
     <div id="gameContainer">
+           
       <div id="team1Panel" class="teamPanel">
+               
         <h3>EC VITÓRIA</h3>
+               
         <ul id="team1List">
+                   
           <li>Nenhum jogador...</li>
+                 
         </ul>
+             
       </div>
 
+           
       <div id="canvas-and-event-wrapper" style="position: relative">
+               
         <div id="eventMessage"></div>
-        <canvas id="game" width="800" height="500"></canvas>
+                <canvas id="game" width="800" height="500"></canvas>      
       </div>
 
+           
       <div id="team2Panel" class="teamPanel">
+               
         <h3>EC BAHIA</h3>
+               
         <ul id="team2List">
+                   
           <li>Nenhum jogador...</li>
+                 
         </ul>
+             
       </div>
+         
     </div>
 
+       
     <div id="initialSetupScreen">
+           
       <div id="setupContent">
+               
         <h2>Escolha seu Time e Nome</h2>
+               
         <input
           type="text"
           id="playerNameInput"
@@ -720,728 +204,75 @@
           maxlength="10"
         />
 
+               
         <div id="teamSelection">
+                   
           <div class="teamCard team1" data-team="1">
+                       
             <h4>Esporte Clube Vitória</h4>
+                     
           </div>
+                   
           <div class="teamCard team2" data-team="2">
+                       
             <h4>Esporte Clube Bahia</h4>
+                     
           </div>
+                 
         </div>
 
-        <button id="connectButton" disabled>CONECTAR AO JOGO</button>
+                <button id="connectButton" disabled>CONECTAR AO JOGO</button>  
+           
       </div>
+         
     </div>
 
+       
     <div id="gameOverScreen">
+           
       <h1 id="winnerMessage" style="font-size: 4em"></h1>
+           
       <button
         id="restartButton"
         style="
-          padding: 15px 30px;
-          font-size: 1.5em;
-          margin-top: 30px;
-          cursor: pointer;
-        "
+          padding: 15px 30px;
+          font-size: 1.5em;
+          margin-top: 30px;
+          cursor: pointer;
+        "
       >
-        Iniciar Nova Partida
+                Iniciar Nova Partida      
       </button>
+         
     </div>
 
+       
     <div id="touchControls">
+           
       <div id="dpad">
-        <button id="up" class="dpad-btn">&#x25B2;</button>
+                <button id="up" class="dpad-btn">&#x25B2;</button>        
         <div style="display: flex">
-          <button id="left" class="dpad-btn">&#x25C0;</button>
-          <button id="right" class="dpad-btn">&#x25B6;</button>
+                    <button id="left" class="dpad-btn">&#x25C0;</button>        
+            <button id="right" class="dpad-btn">&#x25B6;</button>        
         </div>
-        <button id="down" class="dpad-btn">&#x25BC;</button>
+                <button id="down" class="dpad-btn">&#x25BC;</button>      
       </div>
 
-      <button id="kick-btn" class="action-btn">CHUTE</button>
+            <button id="kick-btn" class="action-btn">CHUTE</button>    
     </div>
 
-    <!-- Overlay de vídeo para gol - MELHORADO (GIF incluso) -->
+           
     <div id="goalVideoOverlay">
+           
       <div id="goalText">GOOOL!</div>
-      <img id="goalImage" src="https://storage.googleapis.com/download/storage/v1/b/labcmi_files/o/DOCUMENTOS%2F4e76169c-25a8-4d80-8c5c-24dc5396198a%2Fantonia2.gif?generation=1760626131714064&alt=media" alt="Gol!" />
+           
+      <img
+        id="goalImage"
+        src="https://storage.googleapis.com/download/storage/v1/b/labcmi_files/o/DOCUMENTOS%2F4e76169c-25a8-4d80-8c5c-24dc5396198a%2Fantonia2.gif?generation=1760626131714064&alt=media"
+        alt="Gol!"
+      />
+         
     </div>
-
-    <script>
-      // ----------------- VARIÁVEIS E ELEMENTOS -----------------
-      //const ws = new WebSocket("ws://10.60.0.99:8080"); // IP do host
-      const ws = new WebSocket("wss://bavi-online.onrender.com"); // Para testes locais
-      const canvas = document.getElementById("game");
-      const ctx = canvas.getContext("2d");
-      const status = document.getElementById("status");
-      const scoreEl = document.getElementById("score");
-      const eventMessageEl = document.getElementById("eventMessage");
-      const gameOverScreenEl = document.getElementById("gameOverScreen");
-      const winnerMessageEl = document.getElementById("winnerMessage");
-      const restartButton = document.getElementById("restartButton");
-      const timeEl = document.getElementById("time");
-      const team1List = document.getElementById("team1List");
-      const team2List = document.getElementById("team2List");
-
-      // Goal overlay elements
-      const goalVideoOverlay = document.getElementById("goalVideoOverlay");
-      const goalImage = document.getElementById("goalImage");
-      const goalText = document.getElementById("goalText");
-
-      // NOVOS ELEMENTOS DO MENU
-      const initialSetupScreen = document.getElementById("initialSetupScreen");
-      const playerNameInput = document.getElementById("playerNameInput");
-      const teamCards = document.querySelectorAll(".teamCard");
-      const connectButton = document.getElementById("connectButton");
-
-      const WIDTH = canvas.width; // 800
-      const HEIGHT = canvas.height; // 500
-
-      let playerId = null;
-      let players = {};
-      let bola = { x: 300, y: 200, raio: 8 };
-      let keysPressed = {};
-      let inputInterval = null; // Para o loop de envio de input
-      let score = { 1: 0, 2: 0 };
-      let gameTime = 180;
-      let isKickOffActive = false;
-      let kickOffTeam = null;
-      let selectedTeam = null; // RASTREIA O TIME SELECIONADO NO NOVO MENU
-
-      // ----------------- FUNÇÕES DE MENU/CONEXÃO -----------------
-      function attemptConnection() {
-        const playerName = playerNameInput.value.trim();
-        const maxLength = 10;
-
-        if (playerName.length === 0 || playerName.length > maxLength) {
-          alert(`Por favor, digite um nome válido (máx. ${maxLength} caracteres).`);
-          return;
-        }
-
-        if (!selectedTeam) {
-          alert("Por favor, selecione um time.");
-          return;
-        }
-
-        initialSetupScreen.style.display = "none";
-        status.textContent = "Aguardando partida...";
-
-        // Envia as informações do novo jogador para o servidor
-        ws.send(
-          JSON.stringify({
-            type: "newPlayer",
-            player: {
-              id: playerId,
-              name: playerName,
-              team: selectedTeam,
-            },
-          })
-        );
-      }
-
-      // NOVO: Adiciona a lógica de seleção de time e validação
-      teamCards.forEach((card) => {
-        card.addEventListener("click", function () {
-          // Remove a seleção de todos os cards
-          teamCards.forEach((c) => c.classList.remove("selected"));
-
-          // Adiciona a seleção ao card clicado
-          this.classList.add("selected");
-          selectedTeam = parseInt(this.getAttribute("data-team"));
-
-          // Habilita o botão de conexão se o nome for válido
-          if (playerNameInput.value.trim().length > 0) {
-            connectButton.disabled = false;
-          }
-        });
-      });
-
-      // NOVO: Validação do nome em tempo real
-      playerNameInput.addEventListener("input", function () {
-        this.value = this.value.substring(0, 10); // Garante max length
-        if (this.value.trim().length > 0 && selectedTeam) {
-          connectButton.disabled = false;
-        } else {
-          connectButton.disabled = true;
-        }
-      });
-
-      // NOVO: Ação do botão Conectar
-      connectButton.addEventListener("click", attemptConnection);
-
-      // ----------------- DESENHO / RENDER -----------------
-      function drawField() {
-        // Cores de grama para o efeito de faixa
-        const lightGreen = "#0b572d"; // Cor de fundo do canvas (mais escura)
-        const darkGreen = "#084122"; // Uma cor um pouco mais escura
-        const stripeWidth = 50; // Largura da faixa
-
-        // 1. Desenha as faixas de grama (antes de tudo)
-        for (let i = 0; i * stripeWidth < WIDTH; i++) {
-          const x = i * stripeWidth;
-          const color = i % 2 === 0 ? darkGreen : lightGreen; // Alterna as cores
-          ctx.fillStyle = color;
-          ctx.fillRect(x, 0, stripeWidth, HEIGHT);
-        }
-
-        // Constantes de dimensão (mantidas)
-        const playerGoalWidth = 15;
-        const goalAreaWidth = 70;
-        const goalAreaHeight = 100;
-        const goalY = (HEIGHT - goalAreaHeight) / 2; // 100
-
-        ctx.strokeStyle = "white";
-        ctx.lineWidth = 2;
-        ctx.fillStyle = "white";
-
-        // Desenha as traves (Gols) - Retângulos preenchidos
-        ctx.fillRect(0, goalY, playerGoalWidth, goalAreaHeight);
-        ctx.fillRect(
-          WIDTH - playerGoalWidth,
-          goalY,
-          playerGoalWidth,
-          goalAreaHeight
-        );
-
-        // --- GRUPO 1: LINHAS RETAS E ÁREAS (USAM UM ÚNICO STROKE) ---
-        ctx.beginPath();
-
-        // Linha externa do campo (opcional, mas boa prática)
-        ctx.rect(0, 0, WIDTH, HEIGHT);
-
-        // Linha do meio de campo
-        ctx.moveTo(WIDTH / 2, 0);
-        ctx.lineTo(WIDTH / 2, HEIGHT);
-
-        // Área de Gol Esquerda
-        ctx.rect(playerGoalWidth, goalY, goalAreaWidth, goalAreaHeight);
-
-        // Área de Gol Direita
-        ctx.rect(
-          WIDTH - playerGoalWidth - goalAreaWidth,
-          goalY,
-          goalAreaWidth,
-          goalAreaHeight
-        );
-
-        ctx.stroke();
-        // FIM DO GRUPO 1
-
-        // --- GRUPO 2: CÍRCULO CENTRAL (PRECISA DE UM NOVO BEGIN PATH) ---
-        ctx.beginPath();
-        ctx.arc(WIDTH / 2, HEIGHT / 2, 50, 0, Math.PI * 2);
-        ctx.stroke();
-        // FIM DO GRUPO 2
-      }
-
-      function desenhar() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        drawField();
-
-        // 1. Desenha o preenchimento da bola (branco) - DEVE SER O PRIMEIRO
-        ctx.fillStyle = "white";
-        ctx.beginPath();
-        ctx.arc(bola.x, bola.y, bola.raio, 0, Math.PI * 2);
-        ctx.fill();
-
-        // 2. Desenha a borda preta da bola - DEVE SER O SEGUNDO (Por Cima)
-        ctx.strokeStyle = "black"; // COR DA BORDA
-        ctx.lineWidth = 1; // ESPESSURA DA BORDA
-        ctx.beginPath();
-        ctx.arc(bola.x, bola.y, bola.raio, 0, Math.PI * 2);
-        ctx.stroke(); // Desenha a borda
-
-        // Jogadores
-        for (let id in players) {
-          const p = players[id];
-          const playerRadius = 15; // Raio do jogador
-          const borderWidth = 3; // Largura da borda
-
-          const teamPrimaryColor = p.team === 1 ? "#c11717" : "#2e30eb"; // Vermelho para Vitória, Azul para Bahia
-          const playerBorderColor = p.team === 1 ? "black" : "white";
-
-          // 1. Desenha a borda externa do jogador (círculo maior)
-          ctx.fillStyle = playerBorderColor;
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, playerRadius + borderWidth, 0, Math.PI * 2);
-          ctx.fill();
-
-          // 2. Desenha o jogador (círculo principal - cor primária do time)
-          ctx.fillStyle = teamPrimaryColor; // Cor primária (vermelho ou azul)
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, playerRadius, 0, Math.PI * 2);
-          ctx.fill();
-
-          // 3. Desenha a linha horizontal para o Time 1 OU a faixa para o Time 2
-          if (p.team === 1) {
-            // Time 1: Linha preta simples
-            ctx.fillStyle = "black";
-            ctx.fillRect(p.x - playerRadius, p.y - 1, playerRadius * 2, 2);
-          } else {
-            // Time 2: Faixa Vermelha Central (como na imagem)
-            const bandWidth = playerRadius * 0.7; // Largura da faixa (ajuste conforme necessário)
-            ctx.fillStyle = "#c11717"; // Cor vermelha para a faixa do Bahia
-            ctx.fillRect(
-              p.x - bandWidth / 2,
-              p.y - playerRadius,
-              bandWidth,
-              playerRadius * 2
-            );
-          }
-
-          // 4. Desenha o número com contorno
-          if (p.number) {
-            ctx.font = "bold 14px Arial";
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-
-            const text = p.number.toString();
-
-            ctx.strokeStyle = "black";
-            ctx.lineWidth = 3;
-            ctx.strokeText(text, p.x, p.y);
-
-            ctx.fillStyle = p.team === 1 ? "yellow" : "white"; // Amarelo para Time 1, Branco para Time 2
-            ctx.fillText(text, p.x, p.y);
-          }
-
-          // 5. Desenha o nome do jogador
-          ctx.fillStyle = "white";
-          ctx.font = "14px Arial";
-          ctx.textAlign = "center";
-          ctx.textBaseline = "alphabetic";
-          ctx.fillText(p.name, p.x, p.y - playerRadius - 5);
-        }
-
-        // Atualiza placar e tempo
-        scoreEl.textContent = `${score[1]} x ${score[2]}`;
-        const min = Math.floor(gameTime / 60).toString().padStart(2, "0");
-        const sec = (gameTime % 60).toString().padStart(2, "0");
-        timeEl.textContent = `${min}:${sec}`;
-      }
-
-      function getCombinedDirection() {
-        let direction = "";
-        if (keysPressed.up) direction += "up";
-        if (keysPressed.down) direction += "down";
-        if (keysPressed.left) direction += "Left";
-        if (keysPressed.right) direction += "Right";
-
-        // Se a tecla de kick estiver pressionada, priorizamos o kick
-        if (keysPressed.kick) return "kick";
-
-        // Se não houver movimento, retorna null
-        return direction || null;
-      }
-
-      // ----------------- FUNÇÕES DE LISTA/PLACAR -----------------
-      function updatePlayerLists() {
-        // Limpa as listas atuais
-        team1List.innerHTML = "";
-        team2List.innerHTML = "";
-
-        let team1Players = [];
-        let team2Players = [];
-
-        // Separa os jogadores por time
-        for (let id in players) {
-          const p = players[id];
-
-          const playerNumber = p.number ? `(${p.number}) ` : "";
-          // Adiciona um indicador 'VOCÊ' se for o jogador local
-          const nameDisplay =
-            playerNumber + p.name + (id === playerId ? " (VOCÊ)" : "");
-
-          if (p.team === 1) {
-            team1Players.push(nameDisplay);
-          } else if (p.team === 2) {
-            team2Players.push(nameDisplay);
-          }
-        }
-
-        // Preenche a lista do Time 1
-        if (team1Players.length === 0) {
-          team1List.innerHTML = "<li>(Vazio)</li>";
-        } else {
-          team1Players.forEach((name) => {
-            const li = document.createElement("li");
-            li.textContent = name;
-            // Adiciona uma cor para o 'VOCÊ'
-            if (name.includes("(VOCÊ)")) {
-              li.style.background = "#74ed49";
-              li.style.color = "black";
-            } else {
-              li.style.background = "none";
-              li.style.color = "black";
-            }
-            team1List.appendChild(li);
-          });
-        }
-
-        // Preenche a lista do Time 2
-        if (team2Players.length === 0) {
-          team2List.innerHTML = "<li>(Vazio)</li>";
-        } else {
-          team2Players.forEach((name) => {
-            const li = document.createElement("li");
-            li.textContent = name;
-            // Adiciona uma cor para o 'VOCÊ'
-            if (name.includes("(VOCÊ)")) {
-              li.style.background = "#74ed49";
-              li.style.color = "black";
-            } else {
-              li.style.color = "black";
-            }
-
-            team2List.appendChild(li);
-          });
-        }
-      }
-
-      function displayEventMessage(message, duration = 3000) {
-        eventMessageEl.textContent = message;
-        eventMessageEl.style.display = "block";
-        eventMessageEl.classList.add("event-message-active"); // ADICIONA A CLASSE PARA INICIAR A ANIMAÇÃO
-
-        setTimeout(() => {
-          eventMessageEl.classList.remove("event-message-active");
-          eventMessageEl.style.display = "none";
-        }, duration);
-      }
-
-      // ----------------- CELEBRAÇÃO DE GOL (overlay, gif, partículas, fogos) -----------------
-      function showGoalVideo() {
-        // Mostrar overlay
-        goalVideoOverlay.style.display = "flex";
-
-        // Mostrar texto e GIF imediatamente
-        goalText.style.display = "block";
-        goalImage.style.display = "block";
-
-        // Efeitos especiais
-        createGoalParticles();
-        createFireworks();
-
-        // Esconder tudo após 3 segundos (mantém comportamento que você pediu)
-        setTimeout(() => {
-          // Suaviza o desaparecimento
-          goalText.classList.add("fade-out");
-          goalImage.classList.add("fade-out");
-          goalVideoOverlay.classList.add("fade-out");
-
-          setTimeout(() => {
-            goalVideoOverlay.style.display = "none";
-            goalImage.style.display = "none";
-            goalText.style.display = "none";
-
-            // remove classes para próxima exibição
-            goalText.classList.remove("fade-out");
-            goalImage.classList.remove("fade-out");
-            goalVideoOverlay.classList.remove("fade-out");
-          }, 500);
-        }, 3000);
-      }
-
-      // Função para criar partículas de gol - MELHORADA
-      function createGoalParticles() {
-        for (let i = 0; i < 50; i++) {
-          setTimeout(() => {
-            const particle = document.createElement("div");
-            particle.className = "goal-particle";
-            // posição aleatória dentro da viewport
-            particle.style.left = Math.random() * 100 + "%";
-            particle.style.top = Math.random() * 100 + "%";
-
-            // Cores variadas para as partículas
-            const colors = ["#ffd700", "#ff6b35", "#f7931e", "#ffed4a", "#ff1744"];
-            const c = colors[Math.floor(Math.random() * colors.length)];
-            particle.style.background = c;
-            particle.style.boxShadow = "0 0 12px " + c;
-
-            document.body.appendChild(particle);
-
-            setTimeout(() => {
-              if (document.body.contains(particle)) {
-                document.body.removeChild(particle);
-              }
-            }, 3000);
-          }, i * 20);
-        }
-      }
-
-      // Função para criar fogos de artifício
-      function createFireworks() {
-        for (let i = 0; i < 30; i++) {
-          setTimeout(() => {
-            const firework = document.createElement("div");
-            firework.className = "firework";
-            firework.style.left = Math.random() * 100 + "%";
-            firework.style.top = Math.random() * 60 + "%"; // fogos no topo
-
-            const colors = ["#ff1744", "#2196f3", "#4caf50", "#ff9800", "#9c27b0"];
-            const chosen = colors[Math.floor(Math.random() * colors.length)];
-            firework.style.background = chosen;
-            firework.style.boxShadow = "0 0 18px " + chosen;
-
-            document.body.appendChild(firework);
-
-            setTimeout(() => {
-              if (document.body.contains(firework)) {
-                document.body.removeChild(firework);
-              }
-            }, 1500);
-          }, i * 100);
-        }
-      }
-
-      // ----------------- RESTART -----------------
-      restartButton.onclick = () => {
-        gameOverScreenEl.style.display = "none";
-        // Envia a mensagem para o servidor iniciar a nova partida
-        ws.send(JSON.stringify({ type: "restartGame" }));
-      };
-
-      // index.html: Adicione este loop de envio de input (ex: 30ms = 33 vezes por segundo)
-      inputInterval = setInterval(() => {
-        if (!playerId) return;
-
-        const input = getCombinedDirection();
-
-        if (input) {
-          // Envia a direção combinada para o servidor (ex: "upLeft", "downRight", "kick")
-          ws.send(JSON.stringify({ type: "input", playerId, input }));
-        }
-      }, 30); // Frequência do envio de input
-
-      // ----------------- WebSocket: eventos (mantendo seu fluxo original) -----------------
-      ws.onopen = () => {
-        console.log("✅ Conectado ao servidor");
-        status.textContent = "Conectado!";
-      };
-
-      ws.onmessage = (event) => {
-        const msg = JSON.parse(event.data);
-        switch (msg.type) {
-          case "welcome":
-            playerId = msg.playerId;
-
-            // MOSTRA A TELA INICIAL (mantendo seu fluxo original)
-            initialSetupScreen.style.display = "flex";
-            status.textContent = "Escolha seu nome e time...";
-
-            // Limpa o nome e seleção de time anterior
-            playerNameInput.value = "";
-            selectedTeam = null;
-            connectButton.disabled = true;
-            teamCards.forEach((c) => c.classList.remove("selected"));
-
-            break;
-
-          case "stateSync":
-            players = msg.players || {};
-            bola = msg.bola || bola;
-            score = msg.score || score;
-            gameTime = msg.gameTime || gameTime;
-            updatePlayerLists();
-            break;
-
-          case "newPlayer":
-            players[msg.player.id] = msg.player;
-            updatePlayerLists();
-            break;
-
-          case "playerLeft":
-            delete players[msg.playerId];
-            updatePlayerLists();
-            break;
-
-          case "playerUpdate":
-            players[msg.player.id] = msg.player;
-            break;
-
-          case "update":
-            bola = msg.bola || bola;
-            if (msg.gameTime !== undefined) gameTime = msg.gameTime;
-            if (msg.score) score = msg.score;
-            break;
-
-          case "scoreUpdate":
-            // RECEBE PLACAR E INICIA CELEBRAÇÃO
-            score = msg.score;
-
-            isKickOffActive = msg.kickOff;
-            kickOffTeam = msg.kickOffTeam;
-
-            // Limpa mensagens de evento anteriores
-            eventMessageEl.classList.remove("event-message-active");
-            eventMessageEl.style.display = "none";
-
-            if (isKickOffActive) {
-              const teamNameKo = kickOffTeam === 1 ? "VERMELHO" : "AZUL";
-              const kickOffMsg = `Saída de Bola para o Time ${kickOffTeam} (${teamNameKo})!`;
-              // Exibe por um longo tempo, até ser removida por 'kickOffStarted'
-              displayEventMessage(kickOffMsg, 100000);
-            }
-
-            // MOSTRAR VÍDEO DE GOL / OVERLAY / CONFETES
-            showGoalVideo();
-
-            // NOVO: Mensagem de GOL com o nome do marcador (mantendo sua intenção)
-            const teamName = msg.team === 1 ? "VITÓRIA" : "BAHIA";
-            const scorerMsg =
-              msg.scorer === "o time"
-                ? `GOL do Time ${msg.team} (${teamName})!`
-                : `GOL do Time ${msg.team}! Marcado por ${msg.scorer}!`;
-            displayEventMessage(scorerMsg, 4000); // Exibe por 4 segundos
-
-            scoreEl.textContent = `${score[1]} x ${score[2]}`;
-            break;
-
-          case "gameOver": // Determina o vencedor
-            let winnerName = "";
-            if (msg.score[1] > msg.score[2]) {
-              winnerName = "Time 1 (VITORIA) VENCEU!";
-            } else if (msg.score[2] > msg.score[1]) {
-              winnerName = "Time 2 (BAHIA) VENCEU!";
-            } else {
-              winnerName = "EMPATE!";
-            }
-
-            // Exibe a tela de Game Over
-            winnerMessageEl.textContent = winnerName;
-            gameOverScreenEl.style.display = "flex";
-            gameOverScreenEl.classList.add("game-over-active"); // ADICIONA A CLASSE PARA INICIAR A ANIMAÇÃO
-
-            // Para o loop de input do jogador (IMPORTANTE: Evita movimento após o fim)
-            if (inputInterval) {
-              clearInterval(inputInterval);
-              inputInterval = null;
-            }
-            break;
-
-          case "gameRestarted":
-            // Esconde tela de Game Over (se ainda estiver visível)
-            gameOverScreenEl.style.display = "none";
-            eventMessageEl.classList.remove("event-message-active");
-            gameOverScreenEl.classList.remove("game-over-active"); // REMOVE A CLASSE
-
-            // Reseta a UI do placar e tempo
-            score = msg.score; // 0x0
-            gameTime = 180;
-            scoreEl.textContent = `${score[1]} x ${score[2]}`;
-            timeEl.textContent = "03:00";
-
-            // Reinicia o loop de input para permitir que o jogador se mova novamente
-            if (!inputInterval) {
-              inputInterval = setInterval(() => {
-                if (!playerId) return;
-                const input = getCombinedDirection();
-                if (input) {
-                  ws.send(JSON.stringify({ type: "input", playerId, input }));
-                }
-              }, 30);
-            }
-            break;
-
-          case "kickOffStarted":
-            isKickOffActive = false;
-            kickOffTeam = null;
-            // Limpa a mensagem de evento de saída de bola e mostra 'JOGO ROLANDO!'
-            eventMessageEl.style.display = "none";
-            displayEventMessage("JOGO ROLANDO!", 1500);
-            break;
-        }
-        desenhar();
-      };
-
-      ws.onclose = () => {
-        status.textContent = "❌ Desconectado";
-      };
-
-      ws.onerror = () => {
-        status.textContent = "❌ Erro de conexão";
-      };
-
-      // ----------------- INPUT (teclado) -----------------
-      document.addEventListener("keydown", (e) => {
-        if (e.key === "ArrowUp") keysPressed.up = true;
-        if (e.key === "ArrowDown") keysPressed.down = true;
-        if (e.key === "ArrowLeft") keysPressed.left = true;
-        if (e.key === "ArrowRight") keysPressed.right = true;
-        if (e.code === "Space") keysPressed.kick = true; // Rastreia o chute também
-
-        if (
-          keysPressed.up ||
-          keysPressed.down ||
-          keysPressed.left ||
-          keysPressed.right
-        ) {
-          e.preventDefault();
-        }
-      });
-
-      document.addEventListener("keyup", (e) => {
-        if (e.key === "ArrowUp") keysPressed.up = false;
-        if (e.key === "ArrowDown") keysPressed.down = false;
-        if (e.key === "ArrowLeft") keysPressed.left = false;
-        if (e.key === "ArrowRight") keysPressed.right = false;
-        if (e.code === "Space") keysPressed.kick = false;
-      });
-
-      // --- LÓGICA DE CONTROLES VIRTUAIS (TOUCHSCREEN) ---
-      const touchControls = document.getElementById("touchControls");
-
-      if (touchControls) {
-        const map = {
-          up: "ArrowUp",
-          down: "ArrowDown",
-          left: "ArrowLeft",
-          right: "ArrowRight",
-          "kick-btn": "Space",
-        };
-
-        function handleTouchStart(e) {
-          e.preventDefault(); // Impede o scroll e o comportamento padrão do toque
-          const key = map[this.id];
-
-          if (key === "ArrowUp") keysPressed.up = true;
-          if (key === "ArrowDown") keysPressed.down = true;
-          if (key === "ArrowLeft") keysPressed.left = true;
-          if (key === "ArrowRight") keysPressed.right = true;
-          if (key === "Space") keysPressed.kick = true;
-
-          this.style.background = "rgba(255, 255, 255, 0.8)"; // Feedback visual
-        }
-
-        function handleTouchEnd(e) {
-          e.preventDefault();
-          const key = map[this.id];
-
-          if (key === "ArrowUp") keysPressed.up = false;
-          if (key === "ArrowDown") keysPressed.down = false;
-          if (key === "ArrowLeft") keysPressed.left = false;
-          if (key === "ArrowRight") keysPressed.right = false;
-          if (key === "Space") keysPressed.kick = false;
-
-          this.style.background = "rgba(0, 0, 0, 0.7)"; // Restaura o visual
-        }
-
-        // Aplica os eventos de toque a todos os botões
-        const buttons = document.querySelectorAll("#touchControls button");
-        buttons.forEach((button) => {
-          button.addEventListener("touchstart", handleTouchStart);
-          button.addEventListener("touchend", handleTouchEnd);
-          button.addEventListener("touchcancel", handleTouchEnd); // Caso o dedo deslize para fora
-
-          // Também adicionamos os eventos de mouse (para testar emulando o celular no PC)
-          button.addEventListener("mousedown", handleTouchStart);
-          button.addEventListener("mouseup", handleTouchEnd);
-          button.addEventListener("mouseleave", handleTouchEnd);
-        });
-      }
-
-      // Loop de desenho
-      setInterval(desenhar, 30);
-    </script>
+    <script src="game.js"></script>
   </body>
 </html>
