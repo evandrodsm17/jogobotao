@@ -56,7 +56,7 @@ const BOT_IDS = [
   "bot-player-008",
 ];
 const MAX_BOTS = BOT_IDS.length;
-const MAX_TEAM_SIZE = 5; // O tamanho final desejado
+const MAX_TEAM_SIZE = 3; // O tamanho final desejado
 const MIDFIELD_X = WIDTH / 2; // 400
 
 const BOT_SPEED = 2; // Um pouco mais lento que o humano
