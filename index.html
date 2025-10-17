@@ -1,278 +1,126 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-   
-  <head>
-       
+<head>
     <meta charset="UTF-8" />
-    <link rel="stylesheet" href="style.css" />
-       
-    <title>Jogo de Botão LAN</title>
-       
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-     
-  </head>
+    <title>Jogo de Botão LAN</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
 
-   
-  <body>
-           
-    <div class="painel-placar-topo">
-           
-      <p id="time">03:00</p>
-           
-      <p id="score">0 <span class="score-separator">x</span> 0</p>
-           
-      <p id="status">Conectando...</p>
-         
-    </div>
+<body>
+    <header class="painel-placar-topo">
+        <p id="time">03:00</p>
+        <h1 id="score">0 <span class="score-separator">x</span> 0</h1>
+        <p id="status">Conectando...</p>
+    </header>
 
-    <div
-      id="host-controls"
-      style="
-        display: none;
-        position: fixed;
-        top: 10px;
-        left: 10px;
-        background: rgba(0, 0, 0, 0.9);
-        padding: 10px;
-        border-radius: 5px;
-        color: white;
-        z-index: 1000;
-        border: 2px solid gold;
-      "
-    >
-      <h3>⭐ Host Manager</h3>
-      <p id="game-status-display" style="color: gold; font-weight: bold">
-        Status: Aguardando partida...
-      </p>
-      <button
-        onclick="startGameClient()"
-        style="
-          background: #4caf50;
-          color: white;
-          border: none;
-          padding: 5px 10px;
-          margin-bottom: 8px;
-          cursor: pointer;
-        "
-      >
-        Iniciar / Continuar Jogo
-      </button>
-      <button
-        onclick="restartGameClient()"
-        style="
-          background: #f44336;
-          color: white;
-          border: none;
-          padding: 5px 10px;
-          margin-bottom: 8px;
-          cursor: pointer;
-        "
-      >
-        Reiniciar Partida
-      </button>
+    <section id="host-controls">
+        <h3>⭐ Host Manager</h3>
+        <p id="game-status-display">Status: Aguardando partida...</p>
 
-      <h4>Gerenciar Bots (MAX 3/Time)</h4>
+        <button id="start-btn" class="host-btn primary-btn">
+            Iniciar / Continuar Jogo
+        </button>
+        <button id="restart-btn" class="host-btn danger-btn">
+            Reiniciar Partida
+        </button>
 
-      <div
-        style="
-          margin-bottom: 5px;
-          border-left: 3px solid #c11717;
-          padding-left: 5px;
-        "
-      >
-        <strong style="color: #c11717">Time 1 (VITÓRIA)</strong>:
-        <br />
-        <button onclick="addBotClient(1, 'DEFENDER')" style="font-size: 10px">
-          + DEF
-        </button>
-        <button onclick="addBotClient(1, 'MIDFIELD')" style="font-size: 10px">
-          + MID
-        </button>
-        <button onclick="addBotClient(1, 'ATTACKER')" style="font-size: 10px">
-          + ATT
-        </button>
-        <br />
-        <button
-          onclick="removeBotClient(1, 'DEFENDER')"
-          style="margin-top: 3px; font-size: 10px"
-        >
-          - DEF
-        </button>
-        <button
-          onclick="removeBotClient(1, 'MIDFIELD')"
-          style="font-size: 10px"
-        >
-          - MID
-        </button>
-        <button
-          onclick="removeBotClient(1, 'ATTACKER')"
-          style="font-size: 10px"
-        >
-          - ATT
-        </button>
-      </div>
+        <h4>Gerenciar Bots (MAX 3/Time)</h4>
 
-      <hr style="border-color: #555" />
+        <div class="bot-manager" data-team-id="1">
+            <strong class="team-color team1-text">Time 1 (VITÓRIA)</strong>:
+            <div class="bot-control-group">
+                <button id="add-def-1" class="bot-add-btn" data-position="DEFENDER">+ DEF</button>
+                <button id="add-mid-1" class="bot-add-btn" data-position="MIDFIELD">+ MID</button>
+                <button id="add-att-1" class="bot-add-btn" data-position="ATTACKER">+ ATT</button>
+            </div>
+            <div class="bot-control-group">
+                <button id="remove-def-1" class="bot-remove-btn" data-position="DEFENDER">- DEF</button>
+                <button id="remove-mid-1" class="bot-remove-btn" data-position="MIDFIELD">- MID</button>
+                <button id="remove-att-1" class="bot-remove-btn" data-position="ATTACKER">- ATT</button>
+            </div>
+        </div>
 
-      <div
-        style="
-          margin-bottom: 5px;
-          border-left: 3px solid #2e30eb;
-          padding-left: 5px;
-        "
-      >
-        <strong style="color: #2e30eb">Time 2 (BAHIA)</strong>:
-        <br />
-        <button onclick="addBotClient(2, 'DEFENDER')" style="font-size: 10px">
-          + DEF
-        </button>
-        <button onclick="addBotClient(2, 'MIDFIELD')" style="font-size: 10px">
-          + MID
-        </button>
-        <button onclick="addBotClient(2, 'ATTACKER')" style="font-size: 10px">
-          + ATT
-        </button>
-        <br />
-        <button
-          onclick="removeBotClient(2, 'DEFENDER')"
-          style="margin-top: 3px; font-size: 10px"
-        >
-          - DEF
-        </button>
-        <button
-          onclick="removeBotClient(2, 'MIDFIELD')"
-          style="font-size: 10px"
-        >
-          - MID
-        </button>
-        <button
-          onclick="removeBotClient(2, 'ATTACKER')"
-          style="font-size: 10px"
-        >
-          - ATT
-        </button>
-      </div>
-    </div>
-       
-    <div id="gameContainer">
-           
-      <div id="team1Panel" class="teamPanel">
-               
-        <h3>EC VITÓRIA</h3>
-               
-        <ul id="team1List">
-                   
-          <li>Nenhum jogador...</li>
-                 
-        </ul>
-             
-      </div>
+        <hr class="separator" />
 
-           
-      <div id="canvas-and-event-wrapper" style="position: relative">
-               
-        <div id="eventMessage"></div>
-                <canvas id="game" width="800" height="500"></canvas>      
-      </div>
+        <div class="bot-manager" data-team-id="2">
+            <strong class="team-color team2-text">Time 2 (BAHIA)</strong>:
+            <div class="bot-control-group">
+                <button id="add-def-2" class="bot-add-btn" data-position="DEFENDER">+ DEF</button>
+                <button id="add-mid-2" class="bot-add-btn" data-position="MIDFIELD">+ MID</button>
+                <button id="add-att-2" class="bot-add-btn" data-position="ATTACKER">+ ATT</button>
+            </div>
+            <div class="bot-control-group">
+                <button id="remove-def-2" class="bot-remove-btn" data-position="DEFENDER">- DEF</button>
+                <button id="remove-mid-2" class="bot-remove-btn" data-position="MIDFIELD">- MID</button>
+                <button id="remove-att-2" class="bot-remove-btn" data-position="ATTACKER">- ATT</button>
+            </div>
+        </div>
+    </section>
 
-           
-      <div id="team2Panel" class="teamPanel">
-               
-        <h3>EC BAHIA</h3>
-               
-        <ul id="team2List">
-                   
-          <li>Nenhum jogador...</li>
-                 
-        </ul>
-             
-      </div>
-         
-    </div>
+    <main id="gameContainer">
+        
+        <section id="team1Panel" class="teamPanel">
+            <h3>EC VITÓRIA</h3>
+            <ul id="team1List">
+                <li>Nenhum jogador...</li>
+            </ul>
+        </section>
 
-       
+        <div id="game"> 
+            <canvas id="gameCanvas" width="800" height="500"></canvas>
+            <div id="eventMessage"></div>
+        </div>
+
+        <section id="team2Panel" class="teamPanel">
+            <h3>EC BAHIA</h3>
+            <ul id="team2List">
+                <li>Nenhum jogador...</li>
+            </ul>
+        </section>
+        
+    </main>
+
     <div id="initialSetupScreen">
-           
-      <div id="setupContent">
-               
-        <h2>Escolha seu Time e Nome</h2>
-               
-        <input
-          type="text"
-          id="playerNameInput"
-          placeholder="Seu nome (máx. 10 caracteres)"
-          maxlength="10"
-        />
+        <div id="setupContent">
+            <h2>Escolha seu Time e Nome</h2>
+            <input type="text" id="playerNameInput" placeholder="Seu nome (máx. 10 caracteres)" maxlength="10" />
 
-               
-        <div id="teamSelection">
-                   
-          <div class="teamCard team1" data-team="1">
-                       
-            <h4>Esporte Clube Vitória</h4>
-                     
-          </div>
-                   
-          <div class="teamCard team2" data-team="2">
-                       
-            <h4>Esporte Clube Bahia</h4>
-                     
-          </div>
-                 
+            <div id="teamSelection">
+                <div class="teamCard team1" data-team="1">
+                    <h4>Esporte Clube Vitória</h4>
+                </div>
+                <div class="teamCard team2" data-team="2">
+                    <h4>Esporte Clube Bahia</h4>
+                </div>
+            </div>
+
+            <button id="connectButton" disabled>CONECTAR AO JOGO</button>
         </div>
-
-                <button id="connectButton" disabled>CONECTAR AO JOGO</button>  
-           
-      </div>
-         
     </div>
 
-       
-    <div id="gameOverScreen">
-           
-      <h1 id="winnerMessage" style="font-size: 4em"></h1>
-           
-      <button
-        id="restartButton"
-        style="
-          padding: 15px 30px;
-          font-size: 1.5em;
-          margin-top: 30px;
-          cursor: pointer;
-        "
-      >
-                Iniciar Nova Partida      
-      </button>
-         
-    </div>
-
-       
-    <div id="touchControls">
-           
-      <div id="dpad">
-                <button id="up" class="dpad-btn">&#x25B2;</button>        
-        <div style="display: flex">
-                    <button id="left" class="dpad-btn">&#x25C0;</button>        
-            <button id="right" class="dpad-btn">&#x25B6;</button>        
-        </div>
-                <button id="down" class="dpad-btn">&#x25BC;</button>      
-      </div>
-
-            <button id="kick-btn" class="action-btn">CHUTE</button>    
-    </div>
-
-           
     <div id="goalVideoOverlay">
-           
-      <div id="goalText">GOOOL!</div>
-           
-      <img
-        id="goalImage"
-        src="https://storage.googleapis.com/download/storage/v1/b/labcmi_files/o/DOCUMENTOS%2F4e76169c-25a8-4d80-8c5c-24dc5396198a%2Fantonia2.gif?generation=1760626131714064&alt=media"
-        alt="Gol!"
-      />
-         
+        <div id="goalText">GOOOL!</div>
+        <img id="goalImage" src="https://storage.googleapis.com/download/storage/v1/b/labcmi_files/o/DOCUMENTOS%2F4e76169c-25a8-4d80-8c5c-24dc5396198a%2Fantonia2.gif?generation=1760626131714064&alt=media" alt="Gol!" />
+        </div>
+
+    <div id="gameOverScreen">
+        <h1 id="winnerMessage"></h1>
+        <button id="restartButton" class="host-btn primary-btn">Iniciar Nova Partida</button>
     </div>
-    <script src="game.js"></script>
-  </body>
+
+    <div id="touchControls">
+        <div id="dpad">
+            <button id="up" class="dpad-btn" data-direction="up">&#x25B2;</button>
+            <div class="horizontal-dpad">
+                <button id="left" class="dpad-btn" data-direction="left">&#x25C0;</button>
+                <button id="right" class="dpad-btn" data-direction="right">&#x25B6;</button>
+            </div>
+            <button id="down" class="dpad-btn" data-direction="down">&#x25BC;</button>
+        </div>
+        <button id="kick-btn" class="action-btn">CHUTE</button>
+    </div>
+
+    <script src="game.js" defer></script>
+</body>
 </html>

@@ -1,7 +1,7 @@
 // ----------------- VARIÁVEIS E ELEMENTOS -----------------
-//const ws = new WebSocket("ws://10.60.0.99:8080"); // IP do host
-const ws = new WebSocket("wss://bavi-online.onrender.com"); // Para testes locais
-const canvas = document.getElementById("game");
+const ws = new WebSocket("ws://10.60.0.99:8080"); // IP do host
+//const ws = new WebSocket("wss://bavi-online.onrender.com"); // Para testes locais
+const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 const status = document.getElementById("status");
 const scoreEl = document.getElementById("score");
@@ -667,5 +667,30 @@ if (touchControls) {
     button.addEventListener("mouseleave", handleTouchEnd);
   });
 } // Loop de desenho
+
+
+// --- LIGAÇÃO DOS CONTROLES DO HOST ---
+
+// Botões de Partida
+document.getElementById('start-btn').onclick = startGameClient;
+document.getElementById('restart-btn').onclick = restartGameClient;
+
+// Botões de Bots (Adicionar)
+document.querySelectorAll('.bot-add-btn').forEach(button => {
+    button.addEventListener('click', function() {
+        const team = parseInt(this.closest('.bot-manager').dataset.teamId);
+        const role = this.dataset.position;
+        addBotClient(team, role);
+    });
+});
+
+// Botões de Bots (Remover)
+document.querySelectorAll('.bot-remove-btn').forEach(button => {
+    button.addEventListener('click', function() {
+        const team = parseInt(this.closest('.bot-manager').dataset.teamId);
+        const role = this.dataset.position;
+        removeBotClient(team, role);
+    });
+});
 
 setInterval(desenhar, 30);
