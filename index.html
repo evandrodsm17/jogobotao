@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <title>Jogo de Botão LAN</title>
     <style>
+      /* ----------------- ESTILOS ORIGINAIS (mantidos) ----------------- */
       body {
         background: #292a2a;
         color: white;
@@ -424,9 +425,264 @@
           font-weight: bold;
         }
       }
+
+      /* ----------------- ESTILOS ADICIONAIS/ENHANCED PARA GOL (são adicionados depois para sobrepor) ----------------- */
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      /* subtis ajustes visuais globais (não alteram a lógica original) */
+      body {
+        background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+        min-height: 100vh;
+        overflow-x: hidden;
+      }
+
+      canvas {
+        background: linear-gradient(45deg, #0b572d, #0d6e35, #0f8540);
+        border-radius: 12px;
+        box-shadow: 0 0 30px rgba(0, 255, 0, 0.12);
+      }
+
+      /* Overlay de vídeo para gol - AUMENTADO */
+      #goalVideoOverlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(circle, rgba(255, 215, 0, 0.18), rgba(0, 0, 0, 0.95));
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 100;
+        animation: goalOverlayIn 0.5s ease-in-out;
+        pointer-events: none;
+      }
+
+      #goalVideo {
+        max-width: 90%;
+        max-height: 90%;
+        border-radius: 20px;
+        box-shadow: 0 0 80px rgba(255, 215, 0, 1), 0 0 120px rgba(255, 107, 53, 0.8);
+        border: 3px solid #ffd700;
+      }
+
+      #goalImage {
+        max-width: 70%;
+        max-height: 70%;
+        border-radius: 20px;
+        box-shadow: 0 0 80px rgba(255, 215, 0, 1), 0 0 120px rgba(255, 107, 53, 0.8);
+        border: 3px solid #ffd700;
+        animation: goalImagePulse 0.8s infinite alternate;
+        display: none;
+      }
+
+      @keyframes goalOverlayIn {
+        from {
+          opacity: 0;
+          transform: scale(0.8);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      @keyframes goalImagePulse {
+        0% {
+          transform: scale(1);
+          filter: brightness(1);
+        }
+        100% {
+          transform: scale(1.05);
+          filter: brightness(1.2);
+        }
+      }
+
+      .fade-out {
+        animation: fadeOut 0.5s ease-in-out;
+      }
+
+      /* Texto de GOL aumentado */
+      #goalText {
+        position: absolute;
+        top: 10%;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 6em;
+        font-weight: 900;
+        color: #ffd700;
+        text-shadow:
+          0 0 30px rgba(255, 215, 0, 1),
+          0 0 60px rgba(255, 107, 53, 0.8),
+          3px 3px 0px #ff6b35,
+          -3px -3px 0px #f7931e;
+        z-index: 101;
+        animation: goalTextBounce 0.6s ease-out;
+        font-family: 'Arial Black', Arial, sans-serif;
+        display: none;
+        pointer-events: none;
+      }
+
+      @keyframes goalTextBounce {
+        0% {
+          transform: translateX(-50%) scale(0);
+          opacity: 0;
+        }
+        50% {
+          transform: translateX(-50%) scale(1.3);
+          opacity: 1;
+        }
+        100% {
+          transform: translateX(-50%) scale(1);
+          opacity: 1;
+        }
+      }
+
+      /* Animação para mensagens de evento - AUMENTADA */
+      @keyframes fade-zoom {
+        0% {
+          opacity: 0;
+          transform: translate(-50%, -20px) scale(0.8);
+        }
+        10% {
+          opacity: 1;
+          transform: translate(-50%, 0px) scale(1.1);
+        }
+        90% {
+          opacity: 1;
+          transform: translate(-50%, 0px) scale(1.1);
+        }
+        100% {
+          opacity: 0;
+          transform: translate(-50%, -20px) scale(0.8);
+        }
+      }
+
+      #eventMessage {
+        position: absolute;
+        top: 120px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: #ffd700;
+        font-size: 3.5em;
+        font-weight: 900;
+        text-shadow:
+          0 0 25px rgba(255, 215, 0, 1),
+          0 0 50px rgba(255, 107, 53, 0.8),
+          2px 2px 0px #ff6b35,
+          -2px -2px 0px #f7931e;
+        z-index: 15;
+        display: none;
+        animation-duration: 4s;
+        animation-fill-mode: forwards;
+        font-family: 'Arial Black', Arial, sans-serif;
+      }
+
+      .event-message-active {
+        animation-name: fade-zoom;
+      }
+
+      /* Efeitos de partículas para gol - MELHORADOS */
+      @keyframes goalParticles {
+        0% {
+          opacity: 1;
+          transform: scale(0) rotate(0deg);
+        }
+        25% {
+          opacity: 1;
+          transform: scale(1.5) rotate(90deg);
+        }
+        50% {
+          opacity: 0.9;
+          transform: scale(2) rotate(180deg);
+        }
+        75% {
+          opacity: 0.6;
+          transform: scale(2.5) rotate(270deg);
+        }
+        100% {
+          opacity: 0;
+          transform: scale(3) rotate(360deg);
+        }
+      }
+
+      .goal-particle {
+        position: absolute;
+        width: 15px;
+        height: 15px;
+        background: #ffd700;
+        border-radius: 50%;
+        pointer-events: none;
+        animation: goalParticles 3s ease-out forwards;
+        box-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+      }
+
+      /* Fogos de artifício para gol */
+      @keyframes firework {
+        0% {
+          opacity: 1;
+          transform: scale(0);
+        }
+        50% {
+          opacity: 1;
+          transform: scale(1.2);
+        }
+        100% {
+          opacity: 0;
+          transform: scale(2);
+        }
+      }
+
+      .firework {
+        position: absolute;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        animation: firework 1.5s ease-out forwards;
+      }
+
+      /* Responsividade dos painéis e touch (mantidos/ajustados) */
+      @media (max-width: 850px) {
+        #touchControls {
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          width: 100%;
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-end;
+          padding: 20px;
+          box-sizing: border-box;
+          pointer-events: none;
+        }
+
+        .dpad-btn,
+        .action-btn {
+          pointer-events: auto;
+          background: linear-gradient(135deg, rgba(0, 0, 0, 0.8), rgba(50, 50, 50, 0.8));
+          color: white;
+          border: 2px solid rgba(255, 255, 255, 0.3);
+          border-radius: 15px;
+          font-size: 1.3em;
+          cursor: pointer;
+          margin: 5px;
+          user-select: none;
+          -webkit-user-select: none;
+          touch-action: manipulation;
+          transition: all 0.3s ease;
+          backdrop-filter: blur(10px);
+        }
+      }
     </style>
   </head>
+
   <body>
+    <!-- Placar topo (mantido) -->
     <div class="painel-placar-topo">
       <p id="time">03:00</p>
       <p id="score">0 <span class="score-separator">x</span> 0</p>
@@ -505,9 +761,16 @@
       <button id="kick-btn" class="action-btn">CHUTE</button>
     </div>
 
+    <!-- Overlay de vídeo para gol - MELHORADO (GIF incluso) -->
+    <div id="goalVideoOverlay">
+      <div id="goalText">GOOOL!</div>
+      <img id="goalImage" src="https://storage.googleapis.com/download/storage/v1/b/labcmi_files/o/DOCUMENTOS%2F4e76169c-25a8-4d80-8c5c-24dc5396198a%2Fantonia2.gif?generation=1760626131714064&alt=media" alt="Gol!" />
+    </div>
+
     <script>
-      //const ws = new WebSocket("ws://10.60.0.99:8080"); // IP do host
-      const ws = new WebSocket("wss://bavi-online.onrender.com"); // Para testes locais
+      // ----------------- VARIÁVEIS E ELEMENTOS -----------------
+      const ws = new WebSocket("ws://10.60.0.99:8080"); // IP do host
+      //const ws = new WebSocket("wss://bavi-online.onrender.com"); // Para testes locais
       const canvas = document.getElementById("game");
       const ctx = canvas.getContext("2d");
       const status = document.getElementById("status");
@@ -519,6 +782,11 @@
       const timeEl = document.getElementById("time");
       const team1List = document.getElementById("team1List");
       const team2List = document.getElementById("team2List");
+
+      // Goal overlay elements
+      const goalVideoOverlay = document.getElementById("goalVideoOverlay");
+      const goalImage = document.getElementById("goalImage");
+      const goalText = document.getElementById("goalText");
 
       // NOVOS ELEMENTOS DO MENU
       const initialSetupScreen = document.getElementById("initialSetupScreen");
@@ -540,7 +808,7 @@
       let kickOffTeam = null;
       let selectedTeam = null; // RASTREIA O TIME SELECIONADO NO NOVO MENU
 
-      // NOVA FUNÇÃO DE CONEXÃO E ENVIO DE INFO
+      // ----------------- FUNÇÕES DE MENU/CONEXÃO -----------------
       function attemptConnection() {
         const playerName = playerNameInput.value.trim();
         const maxLength = 10;
@@ -601,6 +869,7 @@
       // NOVO: Ação do botão Conectar
       connectButton.addEventListener("click", attemptConnection);
 
+      // ----------------- DESENHO / RENDER -----------------
       function drawField() {
         // Cores de grama para o efeito de faixa
         const lightGreen = "#0b572d"; // Cor de fundo do canvas (mais escura)
@@ -678,8 +947,6 @@
         // 2. Desenha a borda preta da bola - DEVE SER O SEGUNDO (Por Cima)
         ctx.strokeStyle = "black"; // COR DA BORDA
         ctx.lineWidth = 1; // ESPESSURA DA BORDA
-        // Não precisa de novo beginPath() nem arc() se não mudou de caminho.
-        // Como você usou beginPath() no passo 1, é melhor refazer para garantir.
         ctx.beginPath();
         ctx.arc(bola.x, bola.y, bola.raio, 0, Math.PI * 2);
         ctx.stroke(); // Desenha a borda
@@ -689,28 +956,23 @@
           const p = players[id];
           const playerRadius = 15; // Raio do jogador
           const borderWidth = 3; // Largura da borda
-          // Cor do time 1 (Vermelho) e time 2 (Azul)
-          // Cores base para o preenchimento do botão
 
           const teamPrimaryColor = p.team === 1 ? "#c11717" : "#2e30eb"; // Vermelho para Vitória, Azul para Bahia
-          // Cor da borda externa do jogador
-          // Para o Time 1, mantém preta. Para o Time 2, será branca.
-
           const playerBorderColor = p.team === 1 ? "black" : "white";
-          // 1. Desenha a borda externa do jogador (círculo maior)
 
+          // 1. Desenha a borda externa do jogador (círculo maior)
           ctx.fillStyle = playerBorderColor;
           ctx.beginPath();
           ctx.arc(p.x, p.y, playerRadius + borderWidth, 0, Math.PI * 2);
           ctx.fill();
-          // 2. Desenha o jogador (círculo principal - cor primária do time)
 
+          // 2. Desenha o jogador (círculo principal - cor primária do time)
           ctx.fillStyle = teamPrimaryColor; // Cor primária (vermelho ou azul)
           ctx.beginPath();
           ctx.arc(p.x, p.y, playerRadius, 0, Math.PI * 2);
           ctx.fill();
-          // 3. Desenha a linha horizontal para o Time 1 OU a faixa para o Time 2
 
+          // 3. Desenha a linha horizontal para o Time 1 OU a faixa para o Time 2
           if (p.team === 1) {
             // Time 1: Linha preta simples
             ctx.fillStyle = "black";
@@ -726,6 +988,7 @@
               playerRadius * 2
             );
           }
+
           // 4. Desenha o número com contorno
           if (p.number) {
             ctx.font = "bold 14px Arial";
@@ -741,6 +1004,7 @@
             ctx.fillStyle = p.team === 1 ? "yellow" : "white"; // Amarelo para Time 1, Branco para Time 2
             ctx.fillText(text, p.x, p.y);
           }
+
           // 5. Desenha o nome do jogador
           ctx.fillStyle = "white";
           ctx.font = "14px Arial";
@@ -770,7 +1034,7 @@
         return direction || null;
       }
 
-      // Adicione esta nova função ao seu script
+      // ----------------- FUNÇÕES DE LISTA/PLACAR -----------------
       function updatePlayerLists() {
         // Limpa as listas atuais
         team1List.innerHTML = "";
@@ -839,18 +1103,98 @@
         eventMessageEl.style.display = "block";
         eventMessageEl.classList.add("event-message-active"); // ADICIONA A CLASSE PARA INICIAR A ANIMAÇÃO
 
-        // Define a duração da animação para que o timeout seja sincronizado (se a animação tiver fade-out)
-        // Como a animação dura 4s, vamos usar 4s como default, e o estilo já faz o fade-out.
-        const effectiveDuration = duration;
-
         setTimeout(() => {
-          // A classe de animação é removida pelo CSS (animation-fill-mode: forwards) + o próprio fade-out da animação.
-          // Para evitar que a próxima mensagem seja afetada, garantimos a remoção e o display:none.
-          eventMessageEl.classList.remove("event-message-active"); 
+          eventMessageEl.classList.remove("event-message-active");
           eventMessageEl.style.display = "none";
-        }, effectiveDuration);
+        }, duration);
       }
 
+      // ----------------- CELEBRAÇÃO DE GOL (overlay, gif, partículas, fogos) -----------------
+      function showGoalVideo() {
+        // Mostrar overlay
+        goalVideoOverlay.style.display = "flex";
+
+        // Mostrar texto e GIF imediatamente
+        goalText.style.display = "block";
+        goalImage.style.display = "block";
+
+        // Efeitos especiais
+        createGoalParticles();
+        createFireworks();
+
+        // Esconder tudo após 3 segundos (mantém comportamento que você pediu)
+        setTimeout(() => {
+          // Suaviza o desaparecimento
+          goalText.classList.add("fade-out");
+          goalImage.classList.add("fade-out");
+          goalVideoOverlay.classList.add("fade-out");
+
+          setTimeout(() => {
+            goalVideoOverlay.style.display = "none";
+            goalImage.style.display = "none";
+            goalText.style.display = "none";
+
+            // remove classes para próxima exibição
+            goalText.classList.remove("fade-out");
+            goalImage.classList.remove("fade-out");
+            goalVideoOverlay.classList.remove("fade-out");
+          }, 500);
+        }, 3000);
+      }
+
+      // Função para criar partículas de gol - MELHORADA
+      function createGoalParticles() {
+        for (let i = 0; i < 50; i++) {
+          setTimeout(() => {
+            const particle = document.createElement("div");
+            particle.className = "goal-particle";
+            // posição aleatória dentro da viewport
+            particle.style.left = Math.random() * 100 + "%";
+            particle.style.top = Math.random() * 100 + "%";
+
+            // Cores variadas para as partículas
+            const colors = ["#ffd700", "#ff6b35", "#f7931e", "#ffed4a", "#ff1744"];
+            const c = colors[Math.floor(Math.random() * colors.length)];
+            particle.style.background = c;
+            particle.style.boxShadow = "0 0 12px " + c;
+
+            document.body.appendChild(particle);
+
+            setTimeout(() => {
+              if (document.body.contains(particle)) {
+                document.body.removeChild(particle);
+              }
+            }, 3000);
+          }, i * 20);
+        }
+      }
+
+      // Função para criar fogos de artifício
+      function createFireworks() {
+        for (let i = 0; i < 30; i++) {
+          setTimeout(() => {
+            const firework = document.createElement("div");
+            firework.className = "firework";
+            firework.style.left = Math.random() * 100 + "%";
+            firework.style.top = Math.random() * 60 + "%"; // fogos no topo
+
+            const colors = ["#ff1744", "#2196f3", "#4caf50", "#ff9800", "#9c27b0"];
+            const chosen = colors[Math.floor(Math.random() * colors.length)];
+            firework.style.background = chosen;
+            firework.style.boxShadow = "0 0 18px " + chosen;
+
+            document.body.appendChild(firework);
+
+            setTimeout(() => {
+              if (document.body.contains(firework)) {
+                document.body.removeChild(firework);
+              }
+            }, 1500);
+          }, i * 100);
+        }
+      }
+
+      // ----------------- RESTART -----------------
       restartButton.onclick = () => {
         gameOverScreenEl.style.display = "none";
         // Envia a mensagem para o servidor iniciar a nova partida
@@ -869,6 +1213,7 @@
         }
       }, 30); // Frequência do envio de input
 
+      // ----------------- WebSocket: eventos (mantendo seu fluxo original) -----------------
       ws.onopen = () => {
         console.log("✅ Conectado ao servidor");
         status.textContent = "Conectado!";
@@ -880,7 +1225,7 @@
           case "welcome":
             playerId = msg.playerId;
 
-            // NOVO: Exibe a tela de configuração inicial
+            // MOSTRA A TELA INICIAL (mantendo seu fluxo original)
             initialSetupScreen.style.display = "flex";
             status.textContent = "Escolha seu nome e time...";
 
@@ -897,17 +1242,17 @@
             bola = msg.bola || bola;
             score = msg.score || score;
             gameTime = msg.gameTime || gameTime;
-            updatePlayerLists(); // Atualiza as listas de jogadores
+            updatePlayerLists();
             break;
 
           case "newPlayer":
             players[msg.player.id] = msg.player;
-            updatePlayerLists(); // Atualiza as listas de jogadores
+            updatePlayerLists();
             break;
 
           case "playerLeft":
             delete players[msg.playerId];
-            updatePlayerLists(); // Atualiza as listas de jogadores
+            updatePlayerLists();
             break;
 
           case "playerUpdate":
@@ -921,6 +1266,7 @@
             break;
 
           case "scoreUpdate":
+            // RECEBE PLACAR E INICIA CELEBRAÇÃO
             score = msg.score;
 
             isKickOffActive = msg.kickOff;
@@ -931,12 +1277,16 @@
             eventMessageEl.style.display = "none";
 
             if (isKickOffActive) {
-              const teamName = kickOffTeam === 1 ? "VERMELHO" : "AZUL";
-              const kickOffMsg = `Saída de Bola para o Time ${kickOffTeam} (${teamName})!`;
+              const teamNameKo = kickOffTeam === 1 ? "VERMELHO" : "AZUL";
+              const kickOffMsg = `Saída de Bola para o Time ${kickOffTeam} (${teamNameKo})!`;
               // Exibe por um longo tempo, até ser removida por 'kickOffStarted'
               displayEventMessage(kickOffMsg, 100000);
             }
-            // NOVO: Mensagem de GOL com o nome do marcador
+
+            // MOSTRAR VÍDEO DE GOL / OVERLAY / CONFETES
+            showGoalVideo();
+
+            // NOVO: Mensagem de GOL com o nome do marcador (mantendo sua intenção)
             const teamName = msg.team === 1 ? "VITÓRIA" : "BAHIA";
             const scorerMsg =
               msg.scorer === "o time"
@@ -971,7 +1321,6 @@
 
           case "gameRestarted":
             // Esconde tela de Game Over (se ainda estiver visível)
-
             gameOverScreenEl.style.display = "none";
             eventMessageEl.classList.remove("event-message-active");
             gameOverScreenEl.classList.remove("game-over-active"); // REMOVE A CLASSE
@@ -984,8 +1333,6 @@
 
             // Reinicia o loop de input para permitir que o jogador se mova novamente
             if (!inputInterval) {
-              // Assumindo que você usa uma função 'sendInput' para o loop de 30ms
-              // Se você seguiu o passo a passo anterior:
               inputInterval = setInterval(() => {
                 if (!playerId) return;
                 const input = getCombinedDirection();
@@ -1011,16 +1358,18 @@
         status.textContent = "❌ Desconectado";
       };
 
-      // Captura inputs do jogador
+      ws.onerror = () => {
+        status.textContent = "❌ Erro de conexão";
+      };
+
+      // ----------------- INPUT (teclado) -----------------
       document.addEventListener("keydown", (e) => {
-        // Teclas que queremos rastrear
         if (e.key === "ArrowUp") keysPressed.up = true;
         if (e.key === "ArrowDown") keysPressed.down = true;
         if (e.key === "ArrowLeft") keysPressed.left = true;
         if (e.key === "ArrowRight") keysPressed.right = true;
         if (e.code === "Space") keysPressed.kick = true; // Rastreia o chute também
 
-        // Previne o comportamento padrão (ex: scroll da página)
         if (
           keysPressed.up ||
           keysPressed.down ||
@@ -1090,6 +1439,7 @@
           button.addEventListener("mouseleave", handleTouchEnd);
         });
       }
+
       // Loop de desenho
       setInterval(desenhar, 30);
     </script>
