@@ -56,8 +56,8 @@ const MAX_BOTS = BOT_IDS.length;
 const MAX_TEAM_SIZE = 3; // *** TAMANHO MÁXIMO DO TIME: 3 JOGADORES ***
 const MIDFIELD_X = WIDTH / 2; // 400
 
-const BOT_SPEED = 2;
-const BOT_KICK_DISTANCE = 40;
+const BOT_SPEED = 1;
+const BOT_KICK_DISTANCE = 30;
 const BOT_KICK_ERROR_MAX = 100;
 
 // CONSTANTES DE GOL
@@ -713,8 +713,8 @@ function handleBotMovement(bot, bola) {
   let dy = idealPos.y - bot.y;
   const distToIdeal = Math.sqrt(dx * dx + dy * dy);
 
-  const smoothingFactor = 0.4; // Movimenta até 40% da distância ideal por frame
-  const maxMoveSpeed = BOT_SPEED * 1.5; // Velocidade máxima que pode ser usada
+  const smoothingFactor = 0.3; // Movimenta até 40% da distância ideal por frame
+  const maxMoveSpeed = BOT_SPEED * 1.2; // Velocidade máxima que pode ser usada
 
   if (distToIdeal > 1) {
     const moveDistance = Math.min(distToIdeal * smoothingFactor, maxMoveSpeed);
