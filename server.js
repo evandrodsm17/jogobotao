@@ -46,7 +46,6 @@ const DIAGONAL_FACTOR = 0.7071; // Fator para manter a velocidade constante na d
 const MIDFIELD_X = WIDTH / 2; // 400
 
 const BOT_ID = "bot-player-001";
-const BOT_NAME = "RAFABOT";
 const BOT_SPEED = 2; // Um pouco mais lento que o humano
 const BOT_KICK_DISTANCE = 40; // O Bot chuta quando a bola está próxima
 
@@ -680,12 +679,12 @@ function balanceTeams() {
 
   // Caso 1: Bot necessário e não está presente, ou está no time errado
   if (teamToHelp && (!botIsActive || botTeam !== teamToHelp)) {
-    let botName;
+    let BOT_NAME;
     if (teamToHelp === 1) {
-      botName = "RAFAEL";
+      BOT_NAME = "RAFAEL";
     } else {
       // teamToHelp === 2
-      botName = "MARCELAO";
+      BOT_NAME = "MARCELAO";
     }
 
     console.log(`[BOT] Adicionando/Movendo BOT para o Time ${teamToHelp}`);
