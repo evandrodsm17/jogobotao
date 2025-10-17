@@ -13,27 +13,37 @@
       canvas {
         background: #0b572d;
         display: block;
-        /* Remover a margem automática superior/inferior, manter apenas a lateral */
-        margin: 0 auto;
+        margin: 0 20px; /* Adiciona margem lateral para separar dos painéis */
         border: 2px solid white;
       }
 
-      /* NOVO ESTILO: Contêiner principal para centralizar campo e painéis */
+      .score-separator{
+        font-size: 0.2em;
+        font-weight: normal;
+        color: #c6c209;
+        margin: 0 5px;
+      }
+
+      /* NOVO ESTILO: Contêiner principal para centralizar campo e painéis laterais */
       #gameContainer {
         display: flex;
         justify-content: center;
         align-items: flex-start; /* Alinha o conteúdo ao topo do contêiner */
         width: 100%;
-        max-width: 1200px; /* Limite a largura total para visualização em telas maiores */
-        margin: 20px auto;
+        max-width: 1200px;
+        margin: 10px auto; /* Reduz margem superior para o placar */
       }
 
-      /* NOVO ESTILO: Wrapper para o Canvas e o Placar/Tempo */
-      #canvasWrapper {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        margin: 0 20px; /* Espaçamento entre o campo e os painéis laterais */
+      /* ESTILO DO PLACAR (AGORA NO TOPO) */
+      .painel-placar-topo {
+        /* Estilos para o bloco centralizado no topo */
+        width: 250px;
+        margin: 10px auto; /* Centraliza o placar sob o título */
+        text-align: center;
+        /* Adiciona um background sutil para destaque se desejar */
+        background: #1c1c1c;
+        padding: 5px 0;
+        border-radius: 5px; */
       }
 
       /* NOVO ESTILO: Animação de entrada para Game Over */
@@ -125,8 +135,9 @@
 
       #eventMessage {
         /* Estilos existentes */
+        /* Posição no campo */
         position: absolute;
-        top: 150px;
+        top: 250px; /* Ajusta a posição vertical dentro do campo (50% de 500px + topo do campo) */
         left: 50%;
         transform: translateX(-50%); /* Garante centralização inicial */
         color: yellow;
@@ -138,8 +149,8 @@
         /* Inicia escondido */
 
         /* NOVAS PROPRIEDADES DE ANIMAÇÃO */
-        animation-duration: 4s; /* Duração da animação (deve ser igual ao `duration` do displayEventMessage) */
-        animation-fill-mode: forwards; /* Mantém o estado final da animação (opacity: 0) */
+        animation-duration: 4s;
+        animation-fill-mode: forwards;
       }
 
       /* Classe para ativar a animação */
@@ -147,52 +158,44 @@
         animation-name: fade-zoom;
       }
 
-      /* REDUÇÃO DO PLACAR E TEMPO */
-      .painel-placar {
-        width: 150px; /* Reduz a largura */
-        text-align: center;
-        margin-bottom: 10px; /* Adiciona uma margem inferior para separar do canvas */
-      }
-
+      /* Placar e tempo (topo) */
       #time {
-        font-size: 1.5em; /* Reduz a fonte do tempo */
+        font-size: 1.1em; /* Mantém reduzido */
         font-weight: 700;
-        color: #d0d0d0;
+        color: #ebf30c;
         text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
-        margin: 5px 0; /* Reduz a margem vertical */
+        margin: 5px 0; /* Mantém a margem reduzida */
       }
 
       #score {
-        font-size: 3em; /* Reduz a fonte do placar */
-        font-weight: 900;
+        font-size: 2em; /* Mantém reduzido */
+        font-weight: 600;
         margin: 0;
         letter-spacing: 5px;
       }
 
-      /* NOVO ESTILO: Separador 'X' */
+      /* Separador 'X' */
       #score span {
-        font-size: 0.5em;
+        font-size: 0.2em;
         font-weight: normal;
         color: #c6c209;
-        margin: 0 5px; /* Reduz a margem horizontal do X */
+        margin: 0 5px;
       }
-      /* FIM DA REDUÇÃO */
 
       #status {
-        margin-top: 5px;
-        color: #ffc107; /* Amarelo para status de conexão */
+        margin-top: 10px;
+        color: #02a855;
       }
 
       /* Estilo para o painel de time base */
       .teamPanel {
-        width: 180px; /* Largura padrão */
+        width: 240px; /* Largura padrão */
         background: #d9dcdf;
         padding: 10px;
         border-radius: 8px;
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-        /* Alinhar o painel à altura do topo do canvas */
-        align-self: flex-start; 
-        margin-top: 2px; /* Ajuste fino para alinhar com a borda do canvas */
+        align-self: flex-start; /* Alinha ao topo do contêiner flex (gameContainer) */
+        margin-top: 2px; /* Pequeno ajuste de alinhamento com o canvas */
       }
 
       /* Estilo para o cabeçalho do time */
@@ -228,7 +231,7 @@
       .teamPanel ul {
         list-style: none;
         padding: 0;
-        font-size: 0.9em;
+        font-size: 0.8em;
         color: #171616;
       }
       .teamPanel li {
@@ -240,40 +243,56 @@
         display: none;
       }
 
+      /* O Canvas precisa de position: relative para que o #eventMessage seja posicionado corretamente em relação a ele. */
+      #game {
+          position: relative;
+      }
+
+
       /* Regra para EXIBIR os controles SÓ EM TELAS PEQUENAS (Celulares) */
       @media (max-width: 950px) {
         #gameContainer {
-            flex-direction: column; /* Empilha o canvas e os painéis verticalmente */
-            align-items: center;
-        }
-        
-        #team1Panel, #team2Panel {
-            margin-bottom: 15px; /* Adiciona espaçamento entre os painéis e o canvas */
-            width: 80%;
-            max-width: 380px;
-        }
-        
-        #canvasWrapper {
-             margin: 0; /* Remove a margem lateral */
+          flex-direction: column; /* Empilha o canvas e os painéis verticalmente */
+          align-items: center;
         }
 
+        .painel-placar-topo {
+            margin: 10px auto 0; /* Garante que fique no topo e centralizado */
+        }
+
+        #team1Panel,
+        #team2Panel {
+          margin-bottom: 15px; /* Adiciona espaçamento entre os painéis e o canvas */
+          width: 80%;
+          max-width: 380px;
+        }
+
+        #game {
+             margin: 10px auto; /* Garante que o canvas fique centralizado */
+        }
+
+        #eventMessage {
+            /* Ajusta a posição vertical da mensagem em telas pequenas (campo com 500px de altura) */
+            top: 250px;
+        }
+
+        /* Estilos de controle de toque... (mantidos do seu código) */
         #touchControls {
           position: fixed;
           bottom: 0;
           left: 0;
           width: 100%;
-          display: flex; /* Ativa a exibição em telas pequenas */
+          display: flex;
           justify-content: space-between;
           align-items: flex-end;
           padding: 15px;
           box-sizing: border-box;
-          pointer-events: none; /* Permite interagir com o campo por baixo, exceto nos botões */
+          pointer-events: none;
         }
 
-        /* Estilo dos Botões */
         .dpad-btn,
         .action-btn {
-          pointer-events: auto; /* Reativa a interação nos botões */
+          pointer-events: auto;
           background: rgba(0, 0, 0, 0.7);
           color: white;
           border: 2px solid white;
@@ -281,12 +300,11 @@
           font-size: 1.2em;
           cursor: pointer;
           margin: 5px;
-          user-select: none; /* Impede seleção de texto */
+          user-select: none;
           -webkit-user-select: none;
-          touch-action: manipulation; /* Melhora a resposta ao toque */
+          touch-action: manipulation;
         }
 
-        /* Direcional Pad (DPad) */
         #dpad {
           display: flex;
           flex-direction: column;
@@ -299,18 +317,21 @@
           font-size: 20px;
         }
 
-        /* Botão de Chute */
         #kick-btn {
           width: 120px;
           height: 60px;
-          margin-bottom: 25px; /* Afasta da borda inferior */
+          margin-bottom: 25px;
           font-weight: bold;
         }
       }
     </style>
   </head>
   <body>
-    <h2>🏆 BAVI ONLINE 🏆</h2>
+    <div class="painel-placar-topo">
+      <p id="time">03:00</p>
+      <p id="score">0 <span class="score-separator">x</span> 0</p>
+      <p id="status">Conectando...</p>
+    </div>
 
     <div id="gameContainer">
       <div id="team1Panel" class="teamPanel">
@@ -320,15 +341,8 @@
         </ul>
       </div>
 
-      <div id="canvasWrapper">
-        <div class="painel-placar">
-          <p id="time">03:00</p>
-          <p id="score">0 <span class="score-separator">x</span> 0</p>
-          <p id="status">Conectando...</p>
-        </div>
-
+      <div id="canvas-and-event-wrapper" style="position: relative">
         <div id="eventMessage"></div>
-
         <canvas id="game" width="800" height="500"></canvas>
       </div>
 
@@ -500,45 +514,46 @@
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         drawField();
 
-        // Bola
-        // 1. Desenha a borda preta da bola
-        ctx.strokeStyle = "black"; // COR DA BORDA
-        ctx.lineWidth = 1; // ESPESSURA DA BORDA
-        ctx.beginPath();
-        ctx.arc(bola.x, bola.y, bola.raio, 0, Math.PI * 2);
-        ctx.stroke(); // Desenha a borda
-
-        // 2. Desenha o preenchimento da bola (branco)
+        // 1. Desenha o preenchimento da bola (branco) - DEVE SER O PRIMEIRO
         ctx.fillStyle = "white";
         ctx.beginPath();
         ctx.arc(bola.x, bola.y, bola.raio, 0, Math.PI * 2);
         ctx.fill();
 
+        // 2. Desenha a borda preta da bola - DEVE SER O SEGUNDO (Por Cima)
+        ctx.strokeStyle = "black"; // COR DA BORDA
+        ctx.lineWidth = 1; // ESPESSURA DA BORDA
+        // Não precisa de novo beginPath() nem arc() se não mudou de caminho.
+        // Como você usou beginPath() no passo 1, é melhor refazer para garantir.
+        ctx.beginPath();
+        ctx.arc(bola.x, bola.y, bola.raio, 0, Math.PI * 2);
+        ctx.stroke(); // Desenha a borda
+
         // Jogadores
         for (let id in players) {
           const p = players[id];
           const playerRadius = 15; // Raio do jogador
-          const borderWidth = 3; // Largura da borda 
-          // Cor do time 1 (Vermelho) e time 2 (Azul) 
+          const borderWidth = 3; // Largura da borda
+          // Cor do time 1 (Vermelho) e time 2 (Azul)
           // Cores base para o preenchimento do botão
 
-          const teamPrimaryColor = p.team === 1 ? "#c11717" : "#2e30eb"; // Vermelho para Vitória, Azul para Bahia 
-          // Cor da borda externa do jogador 
+          const teamPrimaryColor = p.team === 1 ? "#c11717" : "#2e30eb"; // Vermelho para Vitória, Azul para Bahia
+          // Cor da borda externa do jogador
           // Para o Time 1, mantém preta. Para o Time 2, será branca.
 
-          const playerBorderColor = p.team === 1 ? "black" : "white"; 
+          const playerBorderColor = p.team === 1 ? "black" : "white";
           // 1. Desenha a borda externa do jogador (círculo maior)
 
           ctx.fillStyle = playerBorderColor;
           ctx.beginPath();
           ctx.arc(p.x, p.y, playerRadius + borderWidth, 0, Math.PI * 2);
-          ctx.fill(); 
+          ctx.fill();
           // 2. Desenha o jogador (círculo principal - cor primária do time)
 
           ctx.fillStyle = teamPrimaryColor; // Cor primária (vermelho ou azul)
           ctx.beginPath();
           ctx.arc(p.x, p.y, playerRadius, 0, Math.PI * 2);
-          ctx.fill(); 
+          ctx.fill();
           // 3. Desenha a linha horizontal para o Time 1 OU a faixa para o Time 2
 
           if (p.team === 1) {
@@ -555,7 +570,7 @@
               bandWidth,
               playerRadius * 2
             );
-          } 
+          }
           // 4. Desenha o número com contorno
           if (p.number) {
             ctx.font = "bold 14px Arial";
@@ -570,7 +585,7 @@
 
             ctx.fillStyle = p.team === 1 ? "yellow" : "white"; // Amarelo para Time 1, Branco para Time 2
             ctx.fillText(text, p.x, p.y);
-          } 
+          }
           // 5. Desenha o nome do jogador
           ctx.fillStyle = "white";
           ctx.font = "14px Arial";
@@ -587,7 +602,6 @@
         const sec = (gameTime % 60).toString().padStart(2, "0");
         timeEl.textContent = `${min}:${sec}`;
       }
-
 
       function getCombinedDirection() {
         let direction = "";
@@ -618,7 +632,8 @@
 
           const playerNumber = p.number ? `(${p.number}) ` : "";
           // Adiciona um indicador 'VOCÊ' se for o jogador local
-          const nameDisplay = playerNumber + p.name + (id === playerId ? " (VOCÊ)" : "");
+          const nameDisplay =
+            playerNumber + p.name + (id === playerId ? " (VOCÊ)" : "");
 
           if (p.team === 1) {
             team1Players.push(nameDisplay);
@@ -635,7 +650,13 @@
             const li = document.createElement("li");
             li.textContent = name;
             // Adiciona uma cor para o 'VOCÊ'
-            if (name.includes("(VOCÊ)")) li.style.background = "lightgreen";
+            if (name.includes("(VOCÊ)")) {
+              li.style.background = "red";
+              li.style.color = "white";
+            } else {
+              li.style.background = "none";
+              li.style.color = "black";
+            }
             team1List.appendChild(li);
           });
         }
@@ -648,7 +669,13 @@
             const li = document.createElement("li");
             li.textContent = name;
             // Adiciona uma cor para o 'VOCÊ'
-            if (name.includes("(VOCÊ)")) li.style.color = "lightgreen";
+            if (name.includes("(VOCÊ)")) {
+              li.style.background = "blue";
+              li.style.color = "white";
+            } else {
+              li.style.color = "black";
+            }
+
             team2List.appendChild(li);
           });
         }
@@ -797,8 +824,7 @@
             // Reinicia o loop de input para permitir que o jogador se mova novamente
             if (!inputInterval) {
               // Assumindo que você usa uma função 'sendInput' para o loop de 30ms
-              // Se você usou o código sugerido, substitua 'sendInput' pela sua lógica de setInterval de 30ms.
-              // Exemplo (se você seguiu o passo a passo anterior):
+              // Se você seguiu o passo a passo anterior:
               inputInterval = setInterval(() => {
                 if (!playerId) return;
                 const input = getCombinedDirection();
@@ -851,8 +877,6 @@
         if (e.key === "ArrowRight") keysPressed.right = false;
         if (e.code === "Space") keysPressed.kick = false;
       });
-
-      // index.html: ADICIONE ESTE CÓDIGO NO FINAL DO <script>
 
       // --- LÓGICA DE CONTROLES VIRTUAIS (TOUCHSCREEN) ---
       const touchControls = document.getElementById("touchControls");
